@@ -54,7 +54,7 @@ The API answers at <http://localhost:8080>. Health check: `GET /up`.
 | API (nginx) | http://localhost:8080    | Proxies to PHP-FPM in the `app` service |
 | Mailpit     | http://localhost:8025    | Captures all outgoing mail              |
 | Meilisearch | http://localhost:7700    | Master key from `MEILISEARCH_KEY`       |
-| PostgreSQL  | localhost:5432           | `vendra` / `secret`, db `vendra`        |
+| PostgreSQL  | localhost:5432           | app role `vendra` / `secret`, superuser `postgres` / `secret`, db `vendra` |
 | Redis       | localhost:6379           |                                         |
 
 ## Day-to-day commands
