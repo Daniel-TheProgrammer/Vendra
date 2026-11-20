@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Shared;
+
+use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Clock\SystemClock;
+use App\Shared\Application\Transaction\DatabaseTransactionRunner;
+use App\Shared\Application\Transaction\TransactionRunner;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\ServiceProvider;
+
+final class SharedServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(Clock::class, SystemClock::class);
+        $this->app->singleton(TransactionRunner::class, DatabaseTransactionRunner::class);
+
+        Date::use(CarbonImmutable::class);
+    }
+}
