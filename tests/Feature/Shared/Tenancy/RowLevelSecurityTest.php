@@ -117,11 +117,13 @@ final class RowLevelSecurityTest extends TestCase
         $this->expectException(QueryException::class);
         $this->expectExceptionMessage('row-level security policy');
 
-        DB::table('tenant_notes')->insert([
+        // Nested transaction = savepoint: the rejection must not poison the
+        // outer transaction RefreshDatabase wraps around the test.
+        DB::transaction(fn () => DB::table('tenant_notes')->insert([
             'id' => '0193a7c0-0000-7000-8000-0000000000ff',
             'tenant_id' => $this->tenantB->id,
             'body' => 'smuggled',
-        ]);
+        ]));
     }
 
     #[Test]
@@ -132,7 +134,7 @@ final class RowLevelSecurityTest extends TestCase
         $this->expectException(QueryException::class);
         $this->expectExceptionMessage('row-level security policy');
 
-        DB::table('tenant_notes')->update(['tenant_id' => $this->tenantB->id]);
+        DB::transaction(fn () => DB::table('tenant_notes')->update(['tenant_id' => $this->tenantB->id]));
     }
 
     #[Test]
