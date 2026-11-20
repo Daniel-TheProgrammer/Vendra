@@ -71,12 +71,12 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: vendra_test
-          POSTGRES_USER: vendra
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: secret
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U vendra -d vendra_test"
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
@@ -106,6 +106,16 @@ jobs:
       - uses: ramsey/composer-install@v3
         with:
           composer-options: --prefer-dist --no-progress
+
+      # Mirrors docker/postgres/init/01-roles.sh: the suite must run as a role
+      # that cannot bypass row-level security, or the isolation tests prove nothing.
+      - name: Create restricted application role and test database
+        env:
+          PGPASSWORD: secret
+        run: |
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE vendra LOGIN PASSWORD 'secret' NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB;" \
+            -c "CREATE DATABASE vendra_test OWNER vendra;"
 
       - name: Prepare environment
         run: |
