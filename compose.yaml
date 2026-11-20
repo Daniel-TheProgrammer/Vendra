@@ -66,15 +66,19 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
+      # Superuser for administration; the app connects as the restricted role
+      # created by docker/postgres/init/01-roles.sh.
       POSTGRES_DB: ${DB_DATABASE:-vendra}
-      POSTGRES_USER: ${DB_USERNAME:-vendra}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      POSTGRES_USER: ${DB_ADMIN_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?DB_ADMIN_PASSWORD must be set in .env}
       POSTGRES_INITDB_ARGS: "--data-checksums"
+      APP_DB_USER: ${DB_USERNAME:-vendra}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-vendra} -d ${DB_DATABASE:-vendra}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_ADMIN_USERNAME:-postgres} -d ${DB_DATABASE:-vendra}"]
       interval: 5s
       timeout: 3s
       retries: 10
