@@ -1,6 +1,6 @@
 # Vendra API
 
-[![CI](https://github.com/Daniel-TheProgrammer/api_laravel/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Daniel-TheProgrammer/api_laravel/actions/workflows/ci.yml)
+[![CI](https://github.com/Daniel-TheProgrammer/Vendra/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Daniel-TheProgrammer/Vendra/actions/workflows/ci.yml)
 
 Multi-tenant commerce and billing platform exposed purely as a JSON API: product
 catalog, orders, double-entry ledger, card payments, outbound webhooks, search and
@@ -30,8 +30,8 @@ Decisions are recorded in [`docs/adr`](docs/adr).
 ## Getting started
 
 ```bash
-git clone git@github.com:Daniel-TheProgrammer/api_laravel.git vendra-api
-cd vendra-api
+git clone git@github.com:Daniel-TheProgrammer/Vendra.git vendra
+cd vendra
 make setup          # copies .env, builds images, installs deps, migrates, installs git hooks
 ```
 
