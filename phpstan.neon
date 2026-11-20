@@ -1,0 +1,19 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 8
+
+    # config/ is declarative env() plumbing with no logic and is left out on purpose.
+    paths:
+        - app
+        - bootstrap/app.php
+        - database
+        - routes
+        - tests
+
+    tmpDir: storage/framework/phpstan
+
+    # No baseline: new code must pass level 8 outright.
+    reportUnmatchedIgnoredErrors: true
+    treatPhpDocTypesAsCertain: false

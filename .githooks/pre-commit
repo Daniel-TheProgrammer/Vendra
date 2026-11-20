@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+#
+# Formats staged PHP files with Pint and re-stages them.
+# Install once with `make hooks` (git config core.hooksPath .githooks).
+
+set -eu
+
+files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.php')
+[ -n "$files" ] || exit 0
+
+if command -v php > /dev/null 2>&1 && [ -f vendor/bin/pint ]; then
+    # shellcheck disable=SC2086
+    php vendor/bin/pint $files
+else
+    # shellcheck disable=SC2086
+    docker compose exec -T app vendor/bin/pint $files
+fi
+
+# shellcheck disable=SC2086
+git add $files

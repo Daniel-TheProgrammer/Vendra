@@ -17,6 +17,9 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/framework/deptrac.cache
+/storage/framework/phpstan
+/storage/framework/rector
 /storage/pail
 /vendor
 Homestead.json
