@@ -1,0 +1,32 @@
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      laravel:
+        patterns: ["laravel/*", "illuminate/*"]
+      dev-tooling:
+        patterns: ["larastan/*", "rector/*", "deptrac/*", "phpunit/*", "laravel/pint"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: docker
+    directory: /docker/app
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "build"
