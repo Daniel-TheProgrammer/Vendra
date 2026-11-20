@@ -1,0 +1,168 @@
+# Module boundary rules for the modular monolith.
+#
+# Every module exposes a public surface (Application services and Domain events) and
+# keeps the rest internal. A module may only reach another module through that
+# public surface, never through its Eloquent models, repositories or controllers.
+#
+# Layers per module:
+#   <Module>Api      app/Modules/<Module>/Application/** and app/Modules/<Module>/Domain/Events/**
+#   <Module>Internal everything else under app/Modules/<Module>/**
+#
+# Rules:
+#   *Internal -> Shared, own Api, any other module's Api
+#   *Api      -> Shared, own Internal, any other module's Api
+#   Http      -> Shared only (framework-level middleware and kernel glue)
+#   Shared    -> Shared only (never depends on a module)
+
+deptrac:
+  paths:
+    - ./app
+
+  cache_file: ./storage/framework/deptrac.cache
+
+  exclude_files:
+    - '#.*Test\.php$#'
+
+  layers:
+    - name: Shared
+      collectors:
+        - type: directory
+          value: app/Shared/.*
+
+    - name: Http
+      collectors:
+        - type: directory
+          value: app/Http/.*
+
+    - name: TenancyApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Tenancy/(Application|Domain/Events)/.*' }
+    - name: TenancyInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Tenancy/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Tenancy/(Application|Domain/Events)/.*' }
+
+    - name: IdentityApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Identity/(Application|Domain/Events)/.*' }
+    - name: IdentityInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Identity/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Identity/(Application|Domain/Events)/.*' }
+
+    - name: CatalogApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Catalog/(Application|Domain/Events)/.*' }
+    - name: CatalogInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Catalog/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Catalog/(Application|Domain/Events)/.*' }
+
+    - name: OrdersApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Orders/(Application|Domain/Events)/.*' }
+    - name: OrdersInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Orders/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Orders/(Application|Domain/Events)/.*' }
+
+    - name: LedgerApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Ledger/(Application|Domain/Events)/.*' }
+    - name: LedgerInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Ledger/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Ledger/(Application|Domain/Events)/.*' }
+
+    - name: PaymentsApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Payments/(Application|Domain/Events)/.*' }
+    - name: PaymentsInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Payments/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Payments/(Application|Domain/Events)/.*' }
+
+    - name: WebhooksApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Webhooks/(Application|Domain/Events)/.*' }
+    - name: WebhooksInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Webhooks/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Webhooks/(Application|Domain/Events)/.*' }
+
+    - name: SearchApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Search/(Application|Domain/Events)/.*' }
+    - name: SearchInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Search/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Search/(Application|Domain/Events)/.*' }
+
+    - name: ReportingApi
+      collectors:
+        - { type: directory, value: 'app/Modules/Reporting/(Application|Domain/Events)/.*' }
+    - name: ReportingInternal
+      collectors:
+        - type: bool
+          must:
+            - { type: directory, value: 'app/Modules/Reporting/.*' }
+          must_not:
+            - { type: directory, value: 'app/Modules/Reporting/(Application|Domain/Events)/.*' }
+
+  ruleset:
+    Shared: []
+    Http: [Shared]
+
+    TenancyInternal:   [Shared, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+    TenancyApi:        [Shared, TenancyInternal, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+
+    IdentityInternal:  [Shared, IdentityApi, TenancyApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+    IdentityApi:       [Shared, IdentityInternal, TenancyApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+
+    CatalogInternal:   [Shared, CatalogApi, TenancyApi, IdentityApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+    CatalogApi:        [Shared, CatalogInternal, TenancyApi, IdentityApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+
+    OrdersInternal:    [Shared, OrdersApi, TenancyApi, IdentityApi, CatalogApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+    OrdersApi:         [Shared, OrdersInternal, TenancyApi, IdentityApi, CatalogApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+
+    LedgerInternal:    [Shared, LedgerApi, TenancyApi, IdentityApi, CatalogApi, OrdersApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+    LedgerApi:         [Shared, LedgerInternal, TenancyApi, IdentityApi, CatalogApi, OrdersApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
+
+    PaymentsInternal:  [Shared, PaymentsApi, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, WebhooksApi, SearchApi, ReportingApi]
+    PaymentsApi:       [Shared, PaymentsInternal, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, WebhooksApi, SearchApi, ReportingApi]
+
+    WebhooksInternal:  [Shared, WebhooksApi, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, SearchApi, ReportingApi]
+    WebhooksApi:       [Shared, WebhooksInternal, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, SearchApi, ReportingApi]
+
+    SearchInternal:    [Shared, SearchApi, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, ReportingApi]
+    SearchApi:         [Shared, SearchInternal, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, ReportingApi]
+
+    ReportingInternal: [Shared, ReportingApi, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi]
+    ReportingApi:      [Shared, ReportingInternal, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi]
+
+  # PHP built-in classes are not part of the layer model.
+  ignore_uncovered_internal_classes: true
