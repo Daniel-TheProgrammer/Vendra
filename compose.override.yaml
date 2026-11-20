@@ -1,0 +1,51 @@
+# Local development overrides. Loaded automatically by `docker compose`.
+# Never used in CI or on servers (they pass -f compose.yaml explicitly).
+
+services:
+  app:
+    build:
+      target: dev
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+
+  nginx:
+    volumes:
+      - ./public:/var/www/html/public:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+  worker:
+    build:
+      target: dev
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+
+  scheduler:
+    build:
+      target: dev
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_ENV: local
+
+  postgres:
+    ports:
+      - "${FORWARD_DB_PORT:-5432}:5432"
+
+  redis:
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+
+  meilisearch:
+    environment:
+      MEILI_ENV: development
+    ports:
+      - "${FORWARD_MEILISEARCH_PORT:-7700}:7700"
+
+  mailpit:
+    ports:
+      - "${FORWARD_MAILPIT_PORT:-8025}:8025"

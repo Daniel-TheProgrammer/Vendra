@@ -1,0 +1,120 @@
+# Base stack. Production-shaped: no bind mounts, no host ports except nginx.
+# compose.override.yaml (loaded automatically) adds the local-development conveniences.
+
+name: vendra
+
+x-app: &app
+  image: ${APP_IMAGE:-vendra/api}:${APP_IMAGE_TAG:-local}
+  build:
+    context: .
+    dockerfile: docker/app/Dockerfile
+    target: ${APP_BUILD_TARGET:-prod}
+  env_file: .env
+  environment:
+    DB_HOST: postgres
+    REDIS_HOST: redis
+    MAIL_HOST: mailpit
+    MEILISEARCH_HOST: http://meilisearch:7700
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  app:
+    <<: *app
+
+  nginx:
+    image: ${APP_IMAGE:-vendra/api}-web:${APP_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: web
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    command: ["php", "artisan", "queue:work", "redis", "--tries=3", "--backoff=5", "--max-time=3600", "--memory=256"]
+    healthcheck:
+      disable: true
+    stop_grace_period: 60s
+
+  scheduler:
+    <<: *app
+    command: ["php", "artisan", "schedule:work"]
+    healthcheck:
+      disable: true
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-vendra}
+      POSTGRES_USER: ${DB_USERNAME:-vendra}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-vendra} -d ${DB_DATABASE:-vendra}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_KEY:?MEILISEARCH_KEY must be set in .env}
+      MEILI_ENV: ${MEILI_ENV:-production}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch-data:/meili_data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:7700/health > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  meilisearch-data:
