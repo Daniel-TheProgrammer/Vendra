@@ -8,6 +8,7 @@ use App\Shared\Application\Clock\Clock;
 use App\Shared\Application\Clock\FrozenClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Testing\PendingCommand;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -20,5 +21,21 @@ abstract class TestCase extends BaseTestCase
         $this->app->instance(Clock::class, $clock);
 
         return $clock;
+    }
+
+    /**
+     * Typed variant of artisan() for fluent console assertions.
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    protected function runArtisan(string $command, array $parameters = []): PendingCommand
+    {
+        $pending = $this->artisan($command, $parameters);
+
+        if (! $pending instanceof PendingCommand) {
+            self::fail('Console output must be mocked to assert on a command; do not call withoutMockingConsoleOutput().');
+        }
+
+        return $pending;
     }
 }

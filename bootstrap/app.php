@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\ResolveTenant;
+use App\Shared\Domain\Exception\DomainException;
 use App\Shared\Infrastructure\Http\Middleware\AssignRequestId;
 use App\Shared\Infrastructure\Http\Middleware\ForceJsonResponse;
 use App\Shared\Infrastructure\Http\Problem\ProblemRenderer;
@@ -24,9 +26,16 @@ return Application::configure(basePath: dirname(__DIR__))
             AssignRequestId::class,
             ForceJsonResponse::class,
         ]);
+
+        $middleware->alias([
+            'tenant' => ResolveTenant::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $isApi = static fn (Request $request): bool => $request->is('api/*') || $request->expectsJson();
+
+        // Business-rule failures are expected client errors, not incidents.
+        $exceptions->dontReport([DomainException::class]);
 
         $exceptions->shouldRenderJsonWhen(fn (Request $request, Throwable $e): bool => $isApi($request));
 

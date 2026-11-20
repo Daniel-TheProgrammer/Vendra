@@ -28,6 +28,7 @@ Makefile
 README.md
 docs
 tests
+app/Modules/*/Tests
 phpunit.xml
 phpstan.neon
 rector.php
