@@ -1,17 +1,18 @@
 # Module boundary rules for the modular monolith.
 #
-# Every module exposes a public surface (Application services and Domain events) and
-# keeps the rest internal. A module may only reach another module through that
-# public surface, never through its Eloquent models, repositories or controllers.
+# Every module exposes a public surface and keeps the rest internal. A module may
+# only reach another module through that public surface, never through its
+# Eloquent models, repositories, controllers or console commands.
 #
 # Layers per module:
-#   <Module>Api      app/Modules/<Module>/Application/** and app/Modules/<Module>/Domain/Events/**
-#   <Module>Internal everything else under app/Modules/<Module>/**
+#   <Module>Api       app/Modules/<Module>/Application/**  (actions, queries, DTOs)
+#                     app/Modules/<Module>/Domain/**       (enums, value objects, events, exceptions)
+#   <Module>Internal  everything else: Infrastructure, Http, Console, Database
 #
 # Rules:
 #   *Internal -> Shared, own Api, any other module's Api
 #   *Api      -> Shared, own Internal, any other module's Api
-#   Http      -> Shared only (framework-level middleware and kernel glue)
+#   Http      -> Shared plus the Api of the modules that own cross-cutting concerns
 #   Shared    -> Shared only (never depends on a module)
 
 deptrac:
@@ -36,106 +37,106 @@ deptrac:
 
     - name: TenancyApi
       collectors:
-        - { type: directory, value: 'app/Modules/Tenancy/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Tenancy/(Application|Domain)/.*' }
     - name: TenancyInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Tenancy/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Tenancy/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Tenancy/(Application|Domain)/.*' }
 
     - name: IdentityApi
       collectors:
-        - { type: directory, value: 'app/Modules/Identity/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Identity/(Application|Domain)/.*' }
     - name: IdentityInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Identity/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Identity/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Identity/(Application|Domain)/.*' }
 
     - name: CatalogApi
       collectors:
-        - { type: directory, value: 'app/Modules/Catalog/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Catalog/(Application|Domain)/.*' }
     - name: CatalogInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Catalog/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Catalog/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Catalog/(Application|Domain)/.*' }
 
     - name: OrdersApi
       collectors:
-        - { type: directory, value: 'app/Modules/Orders/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Orders/(Application|Domain)/.*' }
     - name: OrdersInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Orders/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Orders/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Orders/(Application|Domain)/.*' }
 
     - name: LedgerApi
       collectors:
-        - { type: directory, value: 'app/Modules/Ledger/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Ledger/(Application|Domain)/.*' }
     - name: LedgerInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Ledger/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Ledger/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Ledger/(Application|Domain)/.*' }
 
     - name: PaymentsApi
       collectors:
-        - { type: directory, value: 'app/Modules/Payments/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Payments/(Application|Domain)/.*' }
     - name: PaymentsInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Payments/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Payments/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Payments/(Application|Domain)/.*' }
 
     - name: WebhooksApi
       collectors:
-        - { type: directory, value: 'app/Modules/Webhooks/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Webhooks/(Application|Domain)/.*' }
     - name: WebhooksInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Webhooks/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Webhooks/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Webhooks/(Application|Domain)/.*' }
 
     - name: SearchApi
       collectors:
-        - { type: directory, value: 'app/Modules/Search/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Search/(Application|Domain)/.*' }
     - name: SearchInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Search/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Search/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Search/(Application|Domain)/.*' }
 
     - name: ReportingApi
       collectors:
-        - { type: directory, value: 'app/Modules/Reporting/(Application|Domain/Events)/.*' }
+        - { type: directory, value: 'app/Modules/Reporting/(Application|Domain)/.*' }
     - name: ReportingInternal
       collectors:
         - type: bool
           must:
             - { type: directory, value: 'app/Modules/Reporting/.*' }
           must_not:
-            - { type: directory, value: 'app/Modules/Reporting/(Application|Domain/Events)/.*' }
+            - { type: directory, value: 'app/Modules/Reporting/(Application|Domain)/.*' }
 
   ruleset:
     Shared: []
-    Http: [Shared]
+    Http: [Shared, TenancyApi, IdentityApi]
 
     TenancyInternal:   [Shared, TenancyApi, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
     TenancyApi:        [Shared, TenancyInternal, IdentityApi, CatalogApi, OrdersApi, LedgerApi, PaymentsApi, WebhooksApi, SearchApi, ReportingApi]
