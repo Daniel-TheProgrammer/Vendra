@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local-only documents (the build roadmap lives outside the repo)
+/docs/*.pdf
