@@ -75,11 +75,14 @@ RUN --mount=type=cache,target=/tmp/composer/cache \
 # ---------------------------------------------------------------------------
 FROM base AS dev
 
+# Named zzz- so it loads after zz-opcache.ini (conf.d is read alphabetically)
+# and wins. It must be in place before pcov loads: with JIT on,
+# PHP warns that pcov is incompatible and the installer treats that as failure.
+COPY docker/php/php.dev.ini /usr/local/etc/php/conf.d/zzz-dev.ini
+
 RUN set -eux; \
     install-php-extensions pcov; \
     rm -rf /tmp/pear
-
-COPY docker/php/php.dev.ini /usr/local/etc/php/conf.d/zz-dev.ini
 
 ENV APP_ENV=local
 
