@@ -26,29 +26,43 @@
             <directory>app/Modules/*/Tests</directory>
         </exclude>
     </source>
+    <!--
+        Inside the Compose stack every .env value is a real environment variable.
+        Unforced, they win, and the suite would run as APP_ENV=local against the
+        development database and the shared Redis cache. So everything that decides
+        WHERE tests read and write is forced, and written to $_SERVER with <server>,
+        because Laravel reads $_SERVER before $_ENV. Only DB_HOST and DB_PORT stay
+        overridable, so CI and the container can point at their own server.
+        TestEnvironmentTest fails if this ever regresses.
+    -->
     <php>
-        <env name="APP_ENV" value="testing"/>
-        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="BROADCAST_CONNECTION" value="null"/>
-        <env name="CACHE_STORE" value="array"/>
+        <server name="APP_ENV" value="testing" force="true"/>
+        <server name="APP_DEBUG" value="true" force="true"/>
+        <server name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
+        <server name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <!-- argon2id at the cheapest legal cost: password hashing must not dominate test time. -->
+        <server name="ARGON_MEMORY" value="1024" force="true"/>
+        <server name="ARGON_TIME" value="1" force="true"/>
+        <server name="ARGON_THREADS" value="1" force="true"/>
+        <server name="BROADCAST_CONNECTION" value="null" force="true"/>
+        <server name="CACHE_STORE" value="array" force="true"/>
         <!--
             Tests always run against a real PostgreSQL: row-level security, locking and
-            sequences behave differently on SQLite. Values below are defaults for the
-            Compose stack; CI overrides DB_HOST through the job environment.
+            sequences behave differently on SQLite.
         -->
-        <env name="DB_CONNECTION" value="pgsql"/>
+        <server name="DB_CONNECTION" value="pgsql" force="true"/>
         <env name="DB_HOST" value="postgres"/>
         <env name="DB_PORT" value="5432"/>
-        <env name="DB_DATABASE" value="vendra_test"/>
-        <env name="DB_USERNAME" value="vendra"/>
-        <env name="DB_PASSWORD" value="secret"/>
-        <env name="DB_URL" value=""/>
-        <env name="MAIL_MAILER" value="array"/>
-        <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SESSION_DRIVER" value="array"/>
-        <env name="PULSE_ENABLED" value="false"/>
-        <env name="TELESCOPE_ENABLED" value="false"/>
-        <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <server name="DB_DATABASE" value="vendra_test" force="true"/>
+        <server name="DB_USERNAME" value="vendra" force="true"/>
+        <server name="DB_PASSWORD" value="secret" force="true"/>
+        <server name="DB_URL" value="" force="true"/>
+        <server name="LOG_STACK" value="single" force="true"/>
+        <server name="MAIL_MAILER" value="array" force="true"/>
+        <server name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <server name="SESSION_DRIVER" value="array" force="true"/>
+        <server name="PULSE_ENABLED" value="false" force="true"/>
+        <server name="TELESCOPE_ENABLED" value="false" force="true"/>
+        <server name="NIGHTWATCH_ENABLED" value="false" force="true"/>
     </php>
 </phpunit>
