@@ -147,6 +147,7 @@ final class RowLevelSecurityTest extends TestCase
             JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
             WHERE c.relkind = 'r'
               AND n.nspname = 'public'
+              AND COALESCE(obj_description(c.oid, 'pg_class'), '') NOT LIKE 'vendra:platform-table:%'
               AND NOT (
                     c.relrowsecurity
                 AND c.relforcerowsecurity

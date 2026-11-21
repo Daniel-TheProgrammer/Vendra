@@ -30,4 +30,14 @@ abstract class DomainException extends \DomainException
     {
         return 'Domain rule violated';
     }
+
+    /**
+     * Extra, consumer-safe members merged into the problem document.
+     *
+     * @return array<string, mixed>
+     */
+    public function extensions(): array
+    {
+        return [];
+    }
 }

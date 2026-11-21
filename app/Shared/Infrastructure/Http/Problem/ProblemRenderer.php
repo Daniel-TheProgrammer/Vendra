@@ -67,7 +67,7 @@ final readonly class ProblemRenderer
                 title: $exception->title(),
                 detail: $exception->getMessage(),
                 instance: $instance,
-                extensions: $extensions,
+                extensions: [...$extensions, ...$exception->extensions()],
             );
         }
 
