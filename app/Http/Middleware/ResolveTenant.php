@@ -4,36 +4,34 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Modules\Identity\Application\Queries\ResolvePrincipalTenant;
 use App\Modules\Tenancy\Application\Queries\FindTenant;
 use App\Modules\Tenancy\Application\Queries\TenantSnapshot;
 use App\Modules\Tenancy\Domain\TenantSuspended;
 use App\Shared\Tenancy\TenantContext;
 use Closure;
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Establishes the tenant for the request and clears it afterwards.
- *
- * Phase 1: the tenant comes from an X-Tenant-Id header (id or slug) and only
- * in local and testing environments. Phase 2 derives it from the authenticated
- * principal; the header path is removed then, never widened.
+ * Establishes the tenant for the request from the authenticated principal and
+ * clears it afterwards. Must run after authentication. The client never names
+ * the tenant: it is whatever the presented token is bound to, and only while
+ * the user is still a member of it.
  */
 final readonly class ResolveTenant
 {
-    public const HEADER = 'X-Tenant-Id';
-
     public function __construct(
-        private Application $app,
+        private ResolvePrincipalTenant $principalTenant,
         private FindTenant $findTenant,
         private TenantContext $context,
     ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
-        $tenant = $this->resolve($request);
+        $tenantId = ($this->principalTenant)($request->user());
+        $tenant = $tenantId === null ? null : ($this->findTenant)($tenantId);
 
         if (! $tenant instanceof TenantSnapshot) {
             throw new AuthenticationException('The request could not be associated with a tenant.');
@@ -50,20 +48,5 @@ final readonly class ResolveTenant
         } finally {
             $this->context->clear();
         }
-    }
-
-    private function resolve(Request $request): ?TenantSnapshot
-    {
-        if (! $this->app->environment('local', 'testing')) {
-            return null;
-        }
-
-        $identifier = $request->headers->get(self::HEADER);
-
-        if (! is_string($identifier) || $identifier === '') {
-            return null;
-        }
-
-        return ($this->findTenant)($identifier);
     }
 }
