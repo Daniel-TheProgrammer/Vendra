@@ -18,6 +18,12 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+     * Client application that renders links sent by email (password reset).
+     * The API itself has no HTML pages.
+     */
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
