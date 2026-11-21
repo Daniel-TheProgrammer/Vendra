@@ -18,17 +18,6 @@ final class FindTenant
 
         $tenant = Tenant::query()->where($column, $idOrSlug)->first();
 
-        return $tenant === null ? null : $this->snapshot($tenant);
-    }
-
-    private function snapshot(Tenant $tenant): TenantSnapshot
-    {
-        return new TenantSnapshot(
-            id: $tenant->id,
-            slug: $tenant->slug,
-            name: $tenant->name,
-            plan: $tenant->plan,
-            status: $tenant->status,
-        );
+        return $tenant === null ? null : TenantSnapshot::fromModel($tenant);
     }
 }

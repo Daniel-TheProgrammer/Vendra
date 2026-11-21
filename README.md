@@ -47,7 +47,23 @@ docker compose exec app php artisan migrate
 git config core.hooksPath .githooks
 ```
 
-The API answers at <http://localhost:8080>. Health check: `GET /up`.
+The API answers at <http://localhost:8080>. Health check: `GET /up`. If another
+project already uses a port, change `APP_PORT` or the `FORWARD_*` variables in
+your `.env`; nothing else depends on them.
+
+`make fresh` seeds two tenants and a demo user, `owner@vendra.local` with password
+`correct-horse-battery-1`, who is owner of `acme` and staff in `globex`:
+
+```bash
+curl -s -X POST localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"owner@vendra.local","password":"correct-horse-battery-1","tenant":"acme"}'
+# then: curl localhost:8080/api/v1/me -H "Authorization: Bearer <token>"
+```
+
+Every authenticated request runs as the tenant its token is bound to; the client
+never names the tenant. Errors are RFC 9457 `application/problem+json` documents
+carrying a `request_id`.
 
 | Service     | Local URL                | Notes                                   |
 |-------------|--------------------------|-----------------------------------------|

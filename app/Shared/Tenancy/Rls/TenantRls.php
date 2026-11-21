@@ -26,6 +26,8 @@ final class TenantRls
 {
     public const SETTING = 'app.tenant_id';
 
+    public const PLATFORM_MARKER = 'vendra:platform-table';
+
     public static function enable(string $table): void
     {
         $quoted = self::quote($table);
@@ -35,6 +37,22 @@ final class TenantRls
         DB::statement(sprintf('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', $quoted));
         DB::statement(sprintf('ALTER TABLE %s FORCE ROW LEVEL SECURITY', $quoted));
         DB::statement(sprintf('CREATE POLICY %s ON %s USING (%s) WITH CHECK (%s)', $policy, $quoted, $predicate, $predicate));
+    }
+
+    /**
+     * Declares a table that carries tenant_id but is deliberately NOT under RLS,
+     * because it must be read before a tenant is known or across tenants
+     * (memberships, access tokens, the audit trail). The marker lives in the
+     * table comment, so the declaration is visible in the schema itself and the
+     * RLS guard test can honour it. Every use needs a reason a reviewer can judge.
+     */
+    public static function markPlatformTable(string $table, string $reason): void
+    {
+        DB::statement(sprintf(
+            'COMMENT ON TABLE %s IS %s',
+            self::quote($table),
+            DB::getPdo()->quote(self::PLATFORM_MARKER.': '.$reason),
+        ));
     }
 
     public static function disable(string $table): void

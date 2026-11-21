@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Shared;
 
+use App\Shared\Application\Audit\AuditTrail;
 use App\Shared\Application\Clock\Clock;
 use App\Shared\Application\Clock\SystemClock;
 use App\Shared\Application\Transaction\DatabaseTransactionRunner;
 use App\Shared\Application\Transaction\TransactionRunner;
+use App\Shared\Infrastructure\Audit\DatabaseAuditTrail;
 use App\Shared\Infrastructure\Persistence\BlueprintMacros;
 use App\Shared\Tenancy\Rls\SyncTenantSessionVariable;
 use App\Shared\Tenancy\TenantContext;
@@ -25,6 +27,7 @@ final class SharedServiceProvider extends ServiceProvider
     {
         $this->app->singleton(Clock::class, SystemClock::class);
         $this->app->singleton(TransactionRunner::class, DatabaseTransactionRunner::class);
+        $this->app->singleton(AuditTrail::class, DatabaseAuditTrail::class);
         $this->app->singleton(TenantContext::class);
         $this->app->singleton(SyncTenantSessionVariable::class);
 
