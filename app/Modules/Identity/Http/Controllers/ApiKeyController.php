@@ -9,7 +9,6 @@ use App\Modules\Identity\Application\Actions\RevokeApiKey;
 use App\Modules\Identity\Application\Actions\RotateApiKey;
 use App\Modules\Identity\Application\Commands\CreateApiKeyCommand;
 use App\Modules\Identity\Application\Results\IssuedApiKey;
-use App\Modules\Identity\Application\Services\ApiKeyManagementGuard;
 use App\Modules\Identity\Http\Concerns\ResolvesPrincipal;
 use App\Modules\Identity\Http\Requests\CreateApiKeyRequest;
 use App\Modules\Identity\Http\Resources\ApiKeyResource;
@@ -23,10 +22,8 @@ final class ApiKeyController
 {
     use ResolvesPrincipal;
 
-    public function index(Request $request, TenantContext $context, ApiKeyManagementGuard $guard): JsonResponse
+    public function index(Request $request, TenantContext $context): JsonResponse
     {
-        $guard->ensure($this->principal($request)->id, $context->id());
-
         $keys = ApiKey::query()
             ->where('tenant_id', $context->id())
             ->orderByDesc('created_at')

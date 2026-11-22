@@ -7,14 +7,12 @@ namespace App\Modules\Identity\Application\Actions;
 use App\Modules\Identity\Application\Commands\CreateApiKeyCommand;
 use App\Modules\Identity\Application\Results\IssuedApiKey;
 use App\Modules\Identity\Application\Services\ApiKeyIssuer;
-use App\Modules\Identity\Application\Services\ApiKeyManagementGuard;
 use App\Shared\Application\Audit\AuditTrail;
 use App\Shared\Application\Clock\Clock;
 
 final readonly class CreateApiKey
 {
     public function __construct(
-        private ApiKeyManagementGuard $guard,
         private ApiKeyIssuer $issuer,
         private Clock $clock,
         private AuditTrail $audit,
@@ -22,7 +20,6 @@ final readonly class CreateApiKey
 
     public function __invoke(CreateApiKeyCommand $command): IssuedApiKey
     {
-        $this->guard->ensure($command->actorId, $command->tenantId);
 
         $issued = $this->issuer->issue(
             tenantId: $command->tenantId,
