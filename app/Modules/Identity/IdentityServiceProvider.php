@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Identity;
 
+use App\Modules\Identity\Application\Queries\AuthenticateApiKey;
+use App\Modules\Identity\Console\NotifyExpiringApiKeysCommand;
+use App\Modules\Identity\Http\Middleware\RequireScope;
+use App\Modules\Identity\Infrastructure\Models\ApiKey;
 use App\Modules\Identity\Infrastructure\Models\PersonalAccessToken;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Shared\Infrastructure\Module\ModuleServiceProvider;
@@ -11,6 +15,8 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rules\Password;
@@ -23,15 +29,33 @@ final class IdentityServiceProvider extends ModuleServiceProvider
         return 'Identity';
     }
 
+    protected function moduleCommands(): array
+    {
+        return [NotifyExpiringApiKeysCommand::class];
+    }
+
     public function boot(): void
     {
         parent::boot();
 
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
+        $this->configureApiKeyGuard();
         $this->configurePasswords();
         $this->configureRateLimits();
         $this->configureEmailLinks();
+    }
+
+    /**
+     * Routes accept API keys with "auth:sanctum,api-key" and restrict them
+     * with "scope:<scope>". The guard only claims bearer values that look like
+     * an API key, so personal access tokens are never checked against it.
+     */
+    private function configureApiKeyGuard(): void
+    {
+        Auth::viaRequest('api-key', fn (Request $request): ?ApiKey => $this->app->make(AuthenticateApiKey::class)($request->bearerToken()));
+
+        $this->app->make(Router::class)->aliasMiddleware('scope', RequireScope::class);
     }
 
     private function configurePasswords(): void
