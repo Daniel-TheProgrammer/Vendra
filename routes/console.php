@@ -1,8 +1,20 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+declare(strict_types=1);
 
-Artisan::command('inspire', function (): void {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+use Illuminate\Support\Facades\Schedule;
+
+/*
+|--------------------------------------------------------------------------
+| Scheduled tasks
+|--------------------------------------------------------------------------
+|
+| Run by the "scheduler" container (php artisan schedule:work). Every task is
+| idempotent and guarded against overlapping runs and multiple servers.
+|
+*/
+
+Schedule::command('api-keys:notify-expiring')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->onOneServer();

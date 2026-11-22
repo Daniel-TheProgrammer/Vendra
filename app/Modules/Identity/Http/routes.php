@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Identity\Http\Controllers\ApiKeyController;
 use App\Modules\Identity\Http\Controllers\AuthController;
 use App\Modules\Identity\Http\Controllers\EmailVerificationController;
 use App\Modules\Identity\Http\Controllers\MeController;
@@ -39,5 +40,16 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
         Route::get('tokens', [TokenController::class, 'index'])->name('tokens.index');
         Route::post('tokens', [TokenController::class, 'store'])->name('tokens.store');
         Route::delete('tokens/{token}', [TokenController::class, 'destroy'])->whereUuid('token')->name('tokens.destroy');
+    });
+
+    /*
+     * API keys are managed by people only: these routes accept personal
+     * access tokens, never another API key.
+     */
+    Route::prefix('api-keys')->name('api-keys.')->group(function (): void {
+        Route::get('/', [ApiKeyController::class, 'index'])->name('index');
+        Route::post('/', [ApiKeyController::class, 'store'])->name('store');
+        Route::post('{apiKey}/rotate', [ApiKeyController::class, 'rotate'])->whereUuid('apiKey')->name('rotate');
+        Route::delete('{apiKey}', [ApiKeyController::class, 'destroy'])->whereUuid('apiKey')->name('destroy');
     });
 });

@@ -44,6 +44,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Machine credentials (vendra_sk_...). Driver registered by the Identity module.
+        'api-key' => [
+            'driver' => 'api-key',
+        ],
     ],
 
     /*
