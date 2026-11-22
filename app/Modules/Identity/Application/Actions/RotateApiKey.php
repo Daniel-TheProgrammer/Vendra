@@ -6,7 +6,6 @@ namespace App\Modules\Identity\Application\Actions;
 
 use App\Modules\Identity\Application\Results\IssuedApiKey;
 use App\Modules\Identity\Application\Services\ApiKeyIssuer;
-use App\Modules\Identity\Application\Services\ApiKeyManagementGuard;
 use App\Modules\Identity\Domain\ApiScope;
 use App\Modules\Identity\Infrastructure\Models\ApiKey;
 use App\Shared\Application\Audit\AuditTrail;
@@ -22,7 +21,6 @@ use Illuminate\Contracts\Config\Repository as Config;
 final readonly class RotateApiKey
 {
     public function __construct(
-        private ApiKeyManagementGuard $guard,
         private ApiKeyIssuer $issuer,
         private TransactionRunner $transaction,
         private Clock $clock,
@@ -32,7 +30,6 @@ final readonly class RotateApiKey
 
     public function __invoke(string $actorId, string $tenantId, string $keyId): IssuedApiKey
     {
-        $this->guard->ensure($actorId, $tenantId);
 
         return $this->transaction->run(function () use ($actorId, $tenantId, $keyId): IssuedApiKey {
             $now = $this->clock->now();

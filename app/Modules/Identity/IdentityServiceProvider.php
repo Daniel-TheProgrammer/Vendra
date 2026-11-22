@@ -6,7 +6,7 @@ namespace App\Modules\Identity;
 
 use App\Modules\Identity\Application\Queries\AuthenticateApiKey;
 use App\Modules\Identity\Console\NotifyExpiringApiKeysCommand;
-use App\Modules\Identity\Http\Middleware\RequireScope;
+use App\Modules\Identity\Http\Middleware\RequirePermission;
 use App\Modules\Identity\Infrastructure\Models\ApiKey;
 use App\Modules\Identity\Infrastructure\Models\PersonalAccessToken;
 use App\Modules\Identity\Infrastructure\Models\User;
@@ -48,14 +48,15 @@ final class IdentityServiceProvider extends ModuleServiceProvider
 
     /**
      * Routes accept API keys with "auth:sanctum,api-key" and restrict them
-     * with "scope:<scope>". The guard only claims bearer values that look like
+     * with "permission:<permission>", which checks a key against its scopes and
+     * a person against their role. The guard only claims bearer values that look like
      * an API key, so personal access tokens are never checked against it.
      */
     private function configureApiKeyGuard(): void
     {
         Auth::viaRequest('api-key', fn (Request $request): ?ApiKey => $this->app->make(AuthenticateApiKey::class)($request->bearerToken()));
 
-        $this->app->make(Router::class)->aliasMiddleware('scope', RequireScope::class);
+        $this->app->make(Router::class)->aliasMiddleware('permission', RequirePermission::class);
     }
 
     private function configurePasswords(): void
