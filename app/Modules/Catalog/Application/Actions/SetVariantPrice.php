@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Catalog\Application\Actions;
 
 use App\Modules\Catalog\Application\Services\ProductLock;
-use App\Modules\Catalog\Domain\Events\ProductUpdated;
+use App\Modules\Catalog\Domain\Events\PriceChanged;
 use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
 use App\Modules\Catalog\Infrastructure\Models\VariantPrice;
@@ -16,9 +16,10 @@ use App\Shared\Domain\Money\Money;
 use Illuminate\Contracts\Events\Dispatcher;
 
 /**
- * Creates or replaces the variant's price in the money's currency.
- * Setting the price it already has changes nothing. Returns the product,
- * whose version moved if the price did.
+ * Creates or replaces the variant's base price (the one without a validity
+ * window) in the money's currency. Scheduled prices are left alone. Setting
+ * the price it already has changes nothing. Returns the product, whose
+ * version moved if the price did.
  */
 final readonly class SetVariantPrice
 {
@@ -38,7 +39,12 @@ final readonly class SetVariantPrice
 
             $product = $this->lock->acquireEditable($variant->product_id, $expectedVersion);
 
-            $row = VariantPrice::query()->firstOrNew(['variant_id' => $variant->id, 'currency' => $price->currency->value]);
+            $row = VariantPrice::query()->firstOrNew([
+                'variant_id' => $variant->id,
+                'currency' => $price->currency->value,
+                'valid_from' => null,
+                'valid_to' => null,
+            ]);
             $row->amount = $price->amount;
 
             if (! $row->isDirty()) {
@@ -55,7 +61,7 @@ final readonly class SetVariantPrice
         [$product, $changed] = $result;
 
         if ($changed) {
-            $this->events->dispatch(new ProductUpdated($product->tenant_id, $product->id, $product->version, $this->clock->now()));
+            $this->events->dispatch(new PriceChanged($product->tenant_id, $product->id, $product->version, $this->clock->now(), $variantId, $price->currency));
         }
 
         return $product;

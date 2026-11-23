@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Infrastructure\Models;
 
+use App\Modules\Catalog\Domain\Price;
+use App\Modules\Catalog\Domain\PriceList;
 use App\Shared\Infrastructure\Persistence\Model;
 use App\Shared\Tenancy\BelongsToTenant;
 use Carbon\CarbonImmutable;
@@ -70,6 +72,11 @@ final class ProductVariant extends Model
      */
     public function prices(): HasMany
     {
-        return $this->hasMany(VariantPrice::class, 'variant_id')->orderBy('currency');
+        return $this->hasMany(VariantPrice::class, 'variant_id')->orderBy('currency')->orderBy('valid_from');
+    }
+
+    public function priceList(): PriceList
+    {
+        return new PriceList(array_values($this->prices->map(static fn (VariantPrice $price): Price => $price->toPrice())->all()));
     }
 }

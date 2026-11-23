@@ -36,5 +36,12 @@ Route::middleware(['auth:sanctum,api-key', 'tenant'])->group(function (): void {
             ->whereUuid('variant')
             ->whereIn('currency', array_column(Currency::cases(), 'value'))
             ->name('variants.prices.destroy');
+
+        Route::post('variants/{variant}/scheduled-prices', [VariantController::class, 'schedulePrice'])
+            ->whereUuid('variant')
+            ->name('variants.scheduled-prices.store');
+        Route::delete('variants/{variant}/scheduled-prices/{price}', [VariantController::class, 'cancelScheduledPrice'])
+            ->whereUuid(['variant', 'price'])
+            ->name('variants.scheduled-prices.destroy');
     });
 });
