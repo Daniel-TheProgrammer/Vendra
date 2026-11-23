@@ -113,7 +113,7 @@ final class StockReservationTest extends TestCase
     public function a_reservation_rolls_back_with_the_callers_transaction(): void
     {
         try {
-            DB::transaction(function (): void {
+            DB::transaction(function (): never {
                 $this->reserve([new StockLine($this->mug, 5)]);
 
                 throw new RuntimeException('payment authorisation failed');
