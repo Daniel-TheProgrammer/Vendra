@@ -43,6 +43,13 @@ RUN set -eux; \
         zip; \
     rm -rf /tmp/pear "${COMPOSER_HOME}"
 
+# Apply Alpine security fixes released after the upstream image was cut.
+# Kept as its own layer after the slow extension builds so it is cheap to
+# redo. CI passes the current date as OS_PATCH_DATE, which invalidates this
+# layer once a day instead of serving stale packages from the build cache.
+ARG OS_PATCH_DATE=unset
+RUN echo "os patches: ${OS_PATCH_DATE}" && apk upgrade --no-cache
+
 COPY docker/php/php.ini       /usr/local/etc/php/conf.d/zz-app.ini
 COPY docker/php/opcache.ini   /usr/local/etc/php/conf.d/zz-opcache.ini
 COPY docker/php/www.conf      /usr/local/etc/php-fpm.d/zz-www.conf
@@ -103,6 +110,9 @@ USER www-data
 
 # ---------------------------------------------------------------------------
 FROM nginx:${NGINX_VERSION}-alpine AS web
+
+ARG OS_PATCH_DATE=unset
+RUN echo "os patches: ${OS_PATCH_DATE}" && apk upgrade --no-cache
 
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=prod /var/www/html/public /var/www/html/public
