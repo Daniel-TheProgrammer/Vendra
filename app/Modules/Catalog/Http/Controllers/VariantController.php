@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Catalog\Http\Controllers;
 
 use App\Modules\Catalog\Application\Actions\AddVariant;
+use App\Modules\Catalog\Application\Actions\CancelScheduledPrice;
 use App\Modules\Catalog\Application\Actions\RemoveVariantPrice;
+use App\Modules\Catalog\Application\Actions\SchedulePrice;
 use App\Modules\Catalog\Application\Actions\SetVariantPrice;
 use App\Modules\Catalog\Application\Queries\FindProduct;
 use App\Modules\Catalog\Http\Concerns\HandlesProductVersions;
+use App\Modules\Catalog\Http\Requests\SchedulePriceRequest;
 use App\Modules\Catalog\Http\Requests\SetPriceRequest;
 use App\Modules\Catalog\Http\Requests\StoreVariantRequest;
 use App\Shared\Domain\Money\Currency;
@@ -38,5 +41,18 @@ final class VariantController
     public function removePrice(Request $request, string $variant, string $currency, RemoveVariantPrice $remove): JsonResponse
     {
         return $this->productResponse($request, $remove($variant, Currency::from($currency), $this->expectedVersion($request)));
+    }
+
+    public function schedulePrice(SchedulePriceRequest $request, string $variant, SchedulePrice $schedule): JsonResponse
+    {
+        [$product, $priceId] = $schedule($variant, $request->price(), $request->window(), $this->expectedVersion($request));
+
+        return $this->productResponse($request, $product, 201)
+            ->header('Location', route('api.v1.variants.scheduled-prices.destroy', ['variant' => $variant, 'price' => $priceId]));
+    }
+
+    public function cancelScheduledPrice(Request $request, string $variant, string $price, CancelScheduledPrice $cancel): JsonResponse
+    {
+        return $this->productResponse($request, $cancel($variant, $price, $this->expectedVersion($request)));
     }
 }
