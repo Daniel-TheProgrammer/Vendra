@@ -152,7 +152,9 @@ jobs:
       # Image references must be lowercase; the repository name is not.
       - name: Resolve image name
         id: image
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "patch-date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
 
       - name: Image metadata
         id: meta
@@ -171,6 +173,8 @@ jobs:
           context: .
           file: docker/app/Dockerfile
           target: prod
+          pull: true
+          build-args: OS_PATCH_DATE=${{ steps.image.outputs.patch-date }}
           load: true
           tags: ${{ steps.image.outputs.name }}:scan
           cache-from: type=gha
@@ -200,6 +204,8 @@ jobs:
           context: .
           file: docker/app/Dockerfile
           target: prod
+          pull: true
+          build-args: OS_PATCH_DATE=${{ steps.image.outputs.patch-date }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
