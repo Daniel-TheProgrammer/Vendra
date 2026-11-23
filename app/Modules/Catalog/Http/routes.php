@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Modules\Catalog\Http\Controllers\ProductController;
+use App\Modules\Catalog\Http\Controllers\VariantController;
+use App\Shared\Domain\Money\Currency;
+use Illuminate\Support\Facades\Route;
+
+/*
+ * People and API keys alike: catalog.view maps to the catalog:read scope,
+ * catalog.manage to catalog:write.
+ */
+Route::middleware(['auth:sanctum,api-key', 'tenant'])->group(function (): void {
+    Route::middleware('permission:catalog.view')->group(function (): void {
+        Route::get('products', [ProductController::class, 'index'])->name('products.index');
+        Route::get('products/{product}', [ProductController::class, 'show'])->whereUuid('product')->name('products.show');
+    });
+
+    Route::middleware('permission:catalog.manage')->group(function (): void {
+        Route::post('products', [ProductController::class, 'store'])->name('products.store');
+        Route::patch('products/{product}', [ProductController::class, 'update'])->whereUuid('product')->name('products.update');
+        Route::post('products/{product}/archive', [ProductController::class, 'archive'])->whereUuid('product')->name('products.archive');
+        Route::post('products/{product}/variants', [VariantController::class, 'store'])->whereUuid('product')->name('products.variants.store');
+
+        Route::put('variants/{variant}/prices/{currency}', [VariantController::class, 'setPrice'])
+            ->whereUuid('variant')
+            ->whereIn('currency', array_column(Currency::cases(), 'value'))
+            ->name('variants.prices.update');
+        Route::delete('variants/{variant}/prices/{currency}', [VariantController::class, 'removePrice'])
+            ->whereUuid('variant')
+            ->whereIn('currency', array_column(Currency::cases(), 'value'))
+            ->name('variants.prices.destroy');
+    });
+});
