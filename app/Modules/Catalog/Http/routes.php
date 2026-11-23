@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Catalog\Http\Controllers\ProductController;
+use App\Modules\Catalog\Http\Controllers\ProductImportController;
 use App\Modules\Catalog\Http\Controllers\StockController;
 use App\Modules\Catalog\Http\Controllers\VariantController;
 use App\Shared\Domain\Money\Currency;
@@ -22,6 +23,8 @@ Route::middleware(['auth:sanctum,api-key', 'tenant'])->group(function (): void {
 
     Route::middleware('permission:catalog.manage')->group(function (): void {
         Route::post('products', [ProductController::class, 'store'])->name('products.store');
+        Route::post('products/import', [ProductImportController::class, 'store'])->name('products.import');
+        Route::get('imports/{import}', [ProductImportController::class, 'show'])->whereUuid('import')->name('imports.show');
         Route::patch('products/{product}', [ProductController::class, 'update'])->whereUuid('product')->name('products.update');
         Route::post('products/{product}/archive', [ProductController::class, 'archive'])->whereUuid('product')->name('products.archive');
         Route::post('products/{product}/variants', [VariantController::class, 'store'])->whereUuid('product')->name('products.variants.store');

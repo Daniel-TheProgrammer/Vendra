@@ -28,6 +28,9 @@ final class SkuAlreadyExists extends ConflictException
         return 'SKU already in use';
     }
 
+    /**
+     * @return array{sku: string}
+     */
     public function extensions(): array
     {
         return ['sku' => $this->sku];
