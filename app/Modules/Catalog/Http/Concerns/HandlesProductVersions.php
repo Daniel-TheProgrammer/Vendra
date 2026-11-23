@@ -6,6 +6,7 @@ namespace App\Modules\Catalog\Http\Concerns;
 
 use App\Modules\Catalog\Http\Resources\ProductResource;
 use App\Modules\Catalog\Infrastructure\Models\Product;
+use App\Shared\Infrastructure\Http\Resources\SparseFieldset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -34,11 +35,11 @@ trait HandlesProductVersions
         return (int) $match[1];
     }
 
-    protected function productResponse(Request $request, Product $product, int $status = 200): JsonResponse
+    protected function productResponse(Request $request, Product $product, int $status = 200, ?SparseFieldset $fields = null): JsonResponse
     {
         $product->loadMissing('variants.prices', 'variants.inventory');
 
-        return (new ProductResource($product))
+        return (new ProductResource($product, $fields))
             ->toResponse($request)
             ->setStatusCode($status)
             ->header('ETag', sprintf('"%d"', $product->version));

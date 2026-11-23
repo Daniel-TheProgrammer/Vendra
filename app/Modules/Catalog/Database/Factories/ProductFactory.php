@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Catalog\Database\Factories;
 
 use App\Modules\Catalog\Domain\ProductStatus;
+use App\Modules\Catalog\Domain\Sku;
 use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
 use App\Modules\Catalog\Infrastructure\Models\VariantPrice;
@@ -48,7 +49,7 @@ final class ProductFactory extends Factory
         return $this->afterCreating(static function (Product $product) use ($sku, $amount, $currency): void {
             $variant = ProductVariant::query()->create([
                 'product_id' => $product->id,
-                'sku' => $sku ?? Str::upper(Str::random(10)),
+                'sku' => Sku::normalise($sku ?? Str::random(10)),
                 'name' => null,
                 'options' => [],
             ]);

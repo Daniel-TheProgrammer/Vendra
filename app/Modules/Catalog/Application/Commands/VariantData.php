@@ -4,25 +4,33 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Application\Commands;
 
+use App\Modules\Catalog\Domain\Sku;
 use App\Shared\Domain\Money\Money;
 use InvalidArgumentException;
 
 final readonly class VariantData
 {
     /**
+     * Always in canonical form, whatever the caller passed; see Sku.
+     */
+    public string $sku;
+
+    /**
      * @param  array<string, string>  $options  e.g. ["size" => "M", "colour" => "red"]
      * @param  list<Money>  $prices  at most one per currency
      */
     public function __construct(
-        public string $sku,
+        string $sku,
         public ?string $name = null,
         public array $options = [],
         public array $prices = [],
     ) {
+        $this->sku = Sku::normalise($sku);
+
         $currencies = array_map(static fn (Money $price): string => $price->currency->value, $prices);
 
         if (count($currencies) !== count(array_unique($currencies))) {
-            throw new InvalidArgumentException(sprintf('Variant %s has more than one price in the same currency.', $sku));
+            throw new InvalidArgumentException(sprintf('Variant %s has more than one price in the same currency.', $this->sku));
         }
     }
 }
