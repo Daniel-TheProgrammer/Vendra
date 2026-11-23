@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Catalog\CatalogServiceProvider;
 use App\Modules\Identity\IdentityServiceProvider;
 use App\Modules\Tenancy\TenancyServiceProvider;
 use App\Providers\AppServiceProvider;
@@ -14,4 +15,5 @@ return [
     // Modules, in dependency order.
     TenancyServiceProvider::class,
     IdentityServiceProvider::class,
+    CatalogServiceProvider::class,
 ];
