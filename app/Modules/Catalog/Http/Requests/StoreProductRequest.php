@@ -23,7 +23,7 @@ final class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         $variants = $this->variantRules('variants.*.');
-        $variants['variants.*.sku'][] = 'distinct';
+        $variants['variants.*.sku'][] = 'distinct:ignore_case';
 
         return [
             'name' => ['required', 'string', 'max:200'],
