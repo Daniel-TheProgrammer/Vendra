@@ -43,6 +43,11 @@ final class VariantResource extends ApiResource
                 ])
                 ->values()
                 ->all(),
+            'inventory' => [
+                'on_hand' => $variant->inventory->on_hand ?? 0,
+                'reserved' => $variant->inventory->reserved ?? 0,
+                'available' => ($variant->inventory->on_hand ?? 0) - ($variant->inventory->reserved ?? 0),
+            ],
         ];
     }
 }

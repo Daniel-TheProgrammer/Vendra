@@ -36,7 +36,7 @@ trait HandlesProductVersions
 
     protected function productResponse(Request $request, Product $product, int $status = 200): JsonResponse
     {
-        $product->loadMissing('variants.prices');
+        $product->loadMissing('variants.prices', 'variants.inventory');
 
         return (new ProductResource($product))
             ->toResponse($request)

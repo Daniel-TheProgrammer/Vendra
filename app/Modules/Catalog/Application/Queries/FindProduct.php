@@ -14,7 +14,7 @@ final readonly class FindProduct
      */
     public function __invoke(string $productId): Product
     {
-        $product = Product::query()->with('variants.prices')->whereKey($productId)->first();
+        $product = Product::query()->with('variants.prices', 'variants.inventory')->whereKey($productId)->first();
 
         return $product instanceof Product ? $product : throw EntityNotFound::withId('Product', $productId);
     }

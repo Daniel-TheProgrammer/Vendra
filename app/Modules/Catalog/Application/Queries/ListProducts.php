@@ -29,7 +29,7 @@ final readonly class ListProducts
         ?string $cursor = null,
     ): CursorPaginator {
         return Product::query()
-            ->with('variants.prices')
+            ->with('variants.prices', 'variants.inventory')
             ->when($status, static fn (Builder $query, ProductStatus $status) => $query->where('status', $status->value))
             ->when($search, static fn (Builder $query, string $search) => $query->where('name', 'ilike', '%'.self::escapeLike($search).'%'))
             ->when($sku, static fn (Builder $query, string $sku) => $query->whereHas('variants', static fn (Builder $variants) => $variants->where('sku', $sku)))

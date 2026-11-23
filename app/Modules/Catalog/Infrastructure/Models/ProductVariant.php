@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property string $id
@@ -22,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $updated_at
  * @property-read Product $product
  * @property-read Collection<int, VariantPrice> $prices
+ * @property-read InventoryLevel|null $inventory
  */
 final class ProductVariant extends Model
 {
@@ -51,6 +53,16 @@ final class ProductVariant extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Absent until the variant's stock first changes; treat that as zero.
+     *
+     * @return HasOne<InventoryLevel, $this>
+     */
+    public function inventory(): HasOne
+    {
+        return $this->hasOne(InventoryLevel::class, 'variant_id');
     }
 
     /**
