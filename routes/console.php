@@ -19,6 +19,11 @@ Schedule::command('idempotency:prune')
     ->withoutOverlapping()
     ->onOneServer();
 
+Schedule::command('ledger:reconcile')
+    ->dailyAt('02:30')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('api-keys:notify-expiring')
     ->dailyAt('08:00')
     ->withoutOverlapping()
