@@ -53,7 +53,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function (): void {
     Route::prefix('members')->name('members.')->group(function (): void {
         Route::get('/', [MemberController::class, 'index'])->middleware('permission:members.view')->name('index');
 
-        Route::middleware('permission:members.manage')->group(function (): void {
+        Route::middleware(['permission:members.manage', 'idempotent'])->group(function (): void {
             Route::get('invitations', [InvitationController::class, 'index'])->name('invitations.index');
             Route::post('invitations', [InvitationController::class, 'store'])->name('invitations.store');
             Route::delete('invitations/{invitation}', [InvitationController::class, 'destroy'])->whereUuid('invitation')->name('invitations.destroy');

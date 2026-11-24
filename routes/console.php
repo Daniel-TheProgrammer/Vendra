@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Schedule;
 |
 */
 
+Schedule::command('idempotency:prune')
+    ->dailyAt('03:15')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('api-keys:notify-expiring')
     ->dailyAt('08:00')
     ->withoutOverlapping()

@@ -21,7 +21,7 @@ Route::middleware(['auth:sanctum,api-key', 'tenant'])->group(function (): void {
         Route::get('variants/{variant}/stock-movements', [StockController::class, 'movements'])->whereUuid('variant')->name('variants.stock.movements');
     });
 
-    Route::middleware('permission:catalog.manage')->group(function (): void {
+    Route::middleware(['permission:catalog.manage', 'idempotent'])->group(function (): void {
         Route::post('products', [ProductController::class, 'store'])->name('products.store');
         Route::post('products/import', [ProductImportController::class, 'store'])->name('products.import');
         Route::get('imports/{import}', [ProductImportController::class, 'show'])->whereUuid('import')->name('imports.show');

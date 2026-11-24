@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Middleware\ResolveTenant;
 use App\Shared\Domain\Exception\DomainException;
+use App\Shared\Infrastructure\Http\Idempotency\EnforceIdempotency;
 use App\Shared\Infrastructure\Http\Middleware\AssignRequestId;
 use App\Shared\Infrastructure\Http\Middleware\ForceJsonResponse;
 use App\Shared\Infrastructure\Http\Problem\ProblemRenderer;
@@ -29,6 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'tenant' => ResolveTenant::class,
+            // Last in a route's stack: after authentication, tenant and permission.
+            'idempotent' => EnforceIdempotency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
