@@ -65,6 +65,22 @@ returns the entry already posted. Listeners, retried jobs and replayed events
 therefore cannot double-book. This holds under concurrency: in the
 eight-process test, every worker posts the same key and one entry results.
 
+**Postings from business events** (`Application\Postings`). Listeners book
+domain events, keyed so a redelivered event books once:
+
+| Event | Key | Entry |
+|---|---|---|
+| `OrderPlaced` | `order:{id}:placed` | Dr Accounts Receivable (total) / Cr Sales Revenue (subtotal), Cr Tax Payable (tax) |
+| `OrderPaid` | `order:{id}:paid` | Dr Cash / Stripe Clearing / Cr Accounts Receivable (total) |
+| `OrderCancelled` | `reversal:{placed entry}` | Reverses the placed entry |
+| `OrderRefunded` | `reversal:{…}` | Reverses the paid entry, then the placed entry |
+
+Payment fees are booked by the Payments module (Phase 6), the only module that
+knows them. Today listeners run in-process, inside the request's transaction
+(ADR 0007). If a posting fails, the business change that caused it rolls back
+too. With the outbox (Phase 7), they will run from it with retries, which the
+keys already make safe.
+
 **Materialised balances.** `account_balances` holds running debit and credit
 totals per account. They are updated by `PostJournalEntry` in the posting's
 own transaction:
