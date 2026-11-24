@@ -66,6 +66,22 @@ final readonly class StockLevel
         return new self($this->variantId, $this->onHand, $this->reserved - $quantity);
     }
 
+    /**
+     * Reserved units leave the warehouse: they stop being on hand and stop
+     * being held. Only reserved units can ship, so a fulfilled order can never
+     * take stock promised to another one.
+     */
+    public function ship(int $quantity): self
+    {
+        $this->assertPositive($quantity);
+
+        if ($quantity > $this->reserved) {
+            throw StockNotReserved::for($this->variantId, $this->reserved, $quantity);
+        }
+
+        return new self($this->variantId, $this->onHand - $quantity, $this->reserved - $quantity);
+    }
+
     private function assertNonZero(int $quantity): void
     {
         if ($quantity === 0) {

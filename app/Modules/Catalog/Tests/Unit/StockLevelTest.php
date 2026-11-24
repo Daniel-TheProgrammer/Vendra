@@ -62,6 +62,19 @@ final class StockLevelTest extends TestCase
     }
 
     #[Test]
+    public function shipping_takes_reserved_units_off_the_shelf_and_nothing_else(): void
+    {
+        $shipped = $this->level(10, 3)->ship(2);
+
+        self::assertSame(8, $shipped->onHand);
+        self::assertSame(1, $shipped->reserved);
+        self::assertSame(7, $shipped->available(), 'what was free to sell stays free');
+
+        $this->expectException(StockNotReserved::class);
+        $this->level(10, 3)->ship(4);
+    }
+
+    #[Test]
     public function operations_return_new_levels_and_leave_the_original_untouched(): void
     {
         $original = $this->level(10, 0);
@@ -79,6 +92,7 @@ final class StockLevelTest extends TestCase
         yield 'zero reservation' => [static fn (StockLevel $level): StockLevel => $level->reserve(0)];
         yield 'negative reservation' => [static fn (StockLevel $level): StockLevel => $level->reserve(-1)];
         yield 'negative release' => [static fn (StockLevel $level): StockLevel => $level->release(-1)];
+        yield 'zero shipment' => [static fn (StockLevel $level): StockLevel => $level->ship(0)];
     }
 
     /**

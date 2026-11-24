@@ -9,4 +9,5 @@ enum StockMovementType: string
     case Adjustment = 'adjustment';
     case Reservation = 'reservation';
     case Release = 'release';
+    case Shipment = 'shipment';
 }
