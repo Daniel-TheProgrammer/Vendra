@@ -13,10 +13,11 @@ use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
 use App\Modules\Identity\Domain\ApiScope;
 use App\Modules\Identity\Domain\MembershipRole;
+use App\Modules\Orders\Application\Actions\RecordPayment;
+use App\Modules\Orders\Application\Actions\RequestPayment;
 use App\Modules\Orders\Domain\Events\OrderCancelled;
 use App\Modules\Orders\Domain\Events\OrderFulfilled;
 use App\Modules\Orders\Domain\Events\OrderPlaced;
-use App\Modules\Orders\Domain\OrderStatus;
 use App\Modules\Orders\Domain\Pricing\TaxStrategy;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
@@ -107,7 +108,10 @@ final class OrderApiTest extends TestCase
 
     private function markPaid(string $orderId): void
     {
-        $this->asTenant(static fn () => Order::query()->whereKey($orderId)->update(['status' => OrderStatus::Paid->value]));
+        $this->asTenant(function () use ($orderId): void {
+            $this->app->make(RequestPayment::class)($orderId);
+            $this->app->make(RecordPayment::class)($orderId);
+        });
     }
 
     #[Test]

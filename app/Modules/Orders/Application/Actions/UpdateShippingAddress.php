@@ -10,6 +10,7 @@ use App\Modules\Orders\Domain\ShippingAddress;
 use App\Modules\Orders\Domain\ShippingAddressLocked;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Shared\Application\Transaction\TransactionRunner;
+use App\Shared\Domain\Exception\VersionMismatch;
 
 /**
  * Changes where an order ships to, until it ships. Totals are not
@@ -25,11 +26,12 @@ final readonly class UpdateShippingAddress
 
     /**
      * @throws ShippingAddressLocked
+     * @throws VersionMismatch
      */
-    public function __invoke(string $orderId, ShippingAddress $address, ?string $actorId = null): Order
+    public function __invoke(string $orderId, ShippingAddress $address, ?string $actorId = null, ?int $expectedVersion = null): Order
     {
-        return $this->transaction->run(function () use ($orderId, $address, $actorId): Order {
-            $order = $this->lock->acquire($orderId);
+        return $this->transaction->run(function () use ($orderId, $address, $actorId, $expectedVersion): Order {
+            $order = $this->lock->acquire($orderId, $expectedVersion);
 
             if (! $order->status->allowsShippingChanges()) {
                 throw ShippingAddressLocked::for($order->status);
