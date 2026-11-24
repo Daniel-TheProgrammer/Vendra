@@ -18,6 +18,7 @@ use App\Modules\Orders\Http\Resources\OrderEventResource;
 use App\Modules\Orders\Http\Resources\OrderResource;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderEventRecord;
+use App\Shared\Infrastructure\Http\IfMatch;
 use App\Shared\Infrastructure\Http\Rfc3339;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,19 +69,29 @@ final class OrderController
     {
         $input = $request->validate(['reason' => ['sometimes', 'nullable', 'string', 'max:500']]);
 
-        return $this->orderResponse($request, $cancel($order, isset($input['reason']) ? $request->string('reason')->value() : null, $this->actorId($request)));
+        return $this->orderResponse($request, $cancel(
+            $order,
+            isset($input['reason']) ? $request->string('reason')->value() : null,
+            $this->actorId($request),
+            IfMatch::expectedVersion($request),
+        ));
     }
 
     public function fulfil(Request $request, string $order, FulfilOrder $fulfil): JsonResponse
     {
         $input = $request->validate(['tracking_reference' => ['sometimes', 'nullable', 'string', 'max:100']]);
 
-        return $this->orderResponse($request, $fulfil($order, isset($input['tracking_reference']) ? $request->string('tracking_reference')->value() : null, $this->actorId($request)));
+        return $this->orderResponse($request, $fulfil(
+            $order,
+            isset($input['tracking_reference']) ? $request->string('tracking_reference')->value() : null,
+            $this->actorId($request),
+            IfMatch::expectedVersion($request),
+        ));
     }
 
     public function updateShippingAddress(ShippingAddressRequest $request, string $order, UpdateShippingAddress $update): JsonResponse
     {
-        return $this->orderResponse($request, $update($order, $request->address(), $this->actorId($request)));
+        return $this->orderResponse($request, $update($order, $request->address(), $this->actorId($request), IfMatch::expectedVersion($request)));
     }
 
     public function events(Request $request, string $order, ListOrderEvents $events): JsonResponse
