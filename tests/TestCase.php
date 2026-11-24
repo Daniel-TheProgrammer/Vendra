@@ -13,10 +13,37 @@ use App\Shared\Application\Clock\Clock;
 use App\Shared\Application\Clock\FrozenClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Str;
 use Illuminate\Testing\PendingCommand;
+use Illuminate\Testing\TestResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 abstract class TestCase extends BaseTestCase
 {
+    /**
+     * Like a well-behaved client SDK, every POST gets a fresh Idempotency-Key
+     * unless the test sends its own. Tests of the idempotency contract itself
+     * turn this off.
+     */
+    protected bool $sendIdempotencyKeys = true;
+
+    /**
+     * @param  array<string, mixed>  $parameters
+     * @param  array<string, mixed>  $cookies
+     * @param  array<string, mixed>  $files
+     * @param  array<string, mixed>  $server
+     * @param  string|null  $content
+     * @return TestResponse<Response>
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        if ($this->sendIdempotencyKeys && strtoupper($method) === 'POST' && ! isset($server['HTTP_IDEMPOTENCY_KEY'])) {
+            $server['HTTP_IDEMPOTENCY_KEY'] = (string) Str::uuid7();
+        }
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+    }
+
     /**
      * Replaces the application clock with one that only moves on demand.
      */

@@ -40,4 +40,14 @@ abstract class DomainException extends \DomainException
     {
         return [];
     }
+
+    /**
+     * Response headers the failure implies, such as Retry-After.
+     *
+     * @return array<string, string>
+     */
+    public function headers(): array
+    {
+        return [];
+    }
 }

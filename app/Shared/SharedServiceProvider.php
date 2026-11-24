@@ -10,6 +10,7 @@ use App\Shared\Application\Clock\SystemClock;
 use App\Shared\Application\Transaction\DatabaseTransactionRunner;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Infrastructure\Audit\DatabaseAuditTrail;
+use App\Shared\Infrastructure\Http\Idempotency\PruneIdempotencyKeys;
 use App\Shared\Infrastructure\Persistence\BlueprintMacros;
 use App\Shared\Tenancy\Rls\SyncTenantSessionVariable;
 use App\Shared\Tenancy\TenantContext;
@@ -37,6 +38,10 @@ final class SharedServiceProvider extends ServiceProvider
     public function boot(Dispatcher $events): void
     {
         BlueprintMacros::register();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([PruneIdempotencyKeys::class]);
+        }
 
         $events->listen(TenantContextChanged::class, [SyncTenantSessionVariable::class, 'onTenantChanged']);
         $events->listen(ConnectionEstablished::class, [SyncTenantSessionVariable::class, 'onConnectionEstablished']);
