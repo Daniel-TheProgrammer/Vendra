@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Ledger\Application\Actions;
 
 use App\Modules\Ledger\Application\Commands\EntryMetadata;
+use App\Modules\Ledger\Domain\InvalidJournalEntry;
 use App\Modules\Ledger\Domain\JournalLine;
 use App\Modules\Ledger\Domain\PostedJournalEntry;
 use App\Modules\Ledger\Domain\Side;
@@ -15,9 +16,9 @@ use App\Modules\Ledger\Infrastructure\Models\LedgerAccount;
 use App\Shared\Application\Clock\Clock;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Domain\Exception\EntityNotFound;
+use App\Shared\Domain\Money\Currency;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 use LogicException;
 
 /**
@@ -91,8 +92,10 @@ final readonly class PostJournalEntry
                 throw EntityNotFound::withId('Ledger account', $id);
             }
 
-            if ($currencies->get($id) !== $entry->currency) {
-                throw new InvalidArgumentException(sprintf('Account %s is not a %s account.', $id, $entry->currency->value));
+            $accountCurrency = $currencies->get($id);
+
+            if ($accountCurrency !== $entry->currency) {
+                throw InvalidJournalEntry::mixedCurrencies($entry->currency->value, $accountCurrency instanceof Currency ? $accountCurrency->value : '?');
             }
         }
     }
