@@ -6,21 +6,22 @@ with the `permission:<name>` middleware. This table mirrors that class;
 `PermissionMatrixTest` fails if the two drift apart. ADR 0005 explains why the
 matrix lives in code.
 
-| Permission        | Owner | Admin | Staff | Read-only | API key scope     |
-|-------------------|:-----:|:-----:|:-----:|:---------:|-------------------|
-| `tenant.view`     |   ✓   |   ✓   |   ✓   |     ✓     | `tenant:read`     |
-| `members.view`    |   ✓   |   ✓   |   ✓   |     ✓     | people only       |
-| `members.manage`  |   ✓   |   ✓   |       |           | people only       |
-| `api_keys.manage` |   ✓   |   ✓   |       |           | people only       |
-| `catalog.view`    |   ✓   |   ✓   |   ✓   |     ✓     | `catalog:read`    |
-| `catalog.manage`  |   ✓   |   ✓   |   ✓   |           | `catalog:write`   |
-| `orders.view`     |   ✓   |   ✓   |   ✓   |     ✓     | `orders:read`     |
-| `orders.manage`   |   ✓   |   ✓   |   ✓   |           | `orders:write`    |
-| `ledger.view`     |   ✓   |   ✓   |   ✓   |     ✓     | `ledger:read`     |
-| `ledger.post`     |   ✓   |       |       |           | people only       |
-| `payments.manage` |   ✓   |   ✓   |       |           | `payments:write`  |
-| `webhooks.manage` |   ✓   |   ✓   |       |           | `webhooks:manage` |
-| `reports.view`    |   ✓   |   ✓   |   ✓   |     ✓     | `reports:read`    |
+| Permission           | Owner | Admin | Staff | Read-only | API key scope     |
+|----------------------|:-----:|:-----:|:-----:|:---------:|-------------------|
+| `tenant.view`        |   ✓   |   ✓   |   ✓   |     ✓     | `tenant:read`     |
+| `members.view`       |   ✓   |   ✓   |   ✓   |     ✓     | people only       |
+| `members.manage`     |   ✓   |   ✓   |       |           | people only       |
+| `api_keys.manage`    |   ✓   |   ✓   |       |           | people only       |
+| `catalog.view`       |   ✓   |   ✓   |   ✓   |     ✓     | `catalog:read`    |
+| `catalog.manage`     |   ✓   |   ✓   |   ✓   |           | `catalog:write`   |
+| `orders.view`        |   ✓   |   ✓   |   ✓   |     ✓     | `orders:read`     |
+| `orders.manage`      |   ✓   |   ✓   |   ✓   |           | `orders:write`    |
+| `ledger.view`        |   ✓   |   ✓   |   ✓   |     ✓     | `ledger:read`     |
+| `ledger.post`        |   ✓   |       |       |           | people only       |
+| `payments.manage`    |   ✓   |   ✓   |       |           | `payments:write`  |
+| `payments.configure` |   ✓   |   ✓   |       |           | people only       |
+| `webhooks.manage`    |   ✓   |   ✓   |       |           | `webhooks:manage` |
+| `reports.view`       |   ✓   |   ✓   |   ✓   |     ✓     | `reports:read`    |
 
 ## Rules beyond the matrix
 

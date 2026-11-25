@@ -8,9 +8,7 @@ use App\Modules\Ledger\Application\Postings\OrderPostings;
 use App\Modules\Orders\Application\Queries\FindOrderSummary;
 use App\Modules\Orders\Domain\Events\OrderCancelled;
 use App\Modules\Orders\Domain\Events\OrderEvent;
-use App\Modules\Orders\Domain\Events\OrderPaid;
 use App\Modules\Orders\Domain\Events\OrderPlaced;
-use App\Modules\Orders\Domain\Events\OrderRefunded;
 use App\Shared\Tenancy\TenantContext;
 
 /**
@@ -33,9 +31,7 @@ final readonly class BookOrderLifecycle
 
             match (true) {
                 $event instanceof OrderPlaced => $this->postings->placed($order),
-                $event instanceof OrderPaid => $this->postings->paid($order),
                 $event instanceof OrderCancelled => $this->postings->cancelled($order),
-                $event instanceof OrderRefunded => $this->postings->refunded($order),
                 default => null,
             };
         });
