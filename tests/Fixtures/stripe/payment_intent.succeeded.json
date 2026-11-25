@@ -1,0 +1,49 @@
+{
+  "id": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+  "object": "payment_intent",
+  "amount": 10000,
+  "amount_capturable": 0,
+  "amount_received": 10000,
+  "capture_method": "manual",
+  "client_secret": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e_secret_9XoQb1Lr3nUeTzA7sK2dPv5Wm",
+  "created": 1764061200,
+  "currency": "usd",
+  "last_payment_error": null,
+  "latest_charge": {
+    "id": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+    "object": "charge",
+    "amount": 10000,
+    "amount_captured": 10000,
+    "amount_refunded": 0,
+    "balance_transaction": {
+      "id": "txn_3QK1ZBJt8fA2kVnl0mN4pQ7r",
+      "object": "balance_transaction",
+      "amount": 10000,
+      "available_on": 1764633600,
+      "created": 1764061260,
+      "currency": "usd",
+      "fee": 320,
+      "fee_details": [
+        {"amount": 320, "application": null, "currency": "usd", "description": "Stripe processing fees", "type": "stripe_fee"}
+      ],
+      "net": 9680,
+      "reporting_category": "charge",
+      "source": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+      "status": "pending",
+      "type": "charge"
+    },
+    "captured": true,
+    "created": 1764061230,
+    "currency": "usd",
+    "paid": true,
+    "payment_intent": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+    "refunded": false,
+    "status": "succeeded"
+  },
+  "livemode": false,
+  "metadata": {
+    "vendra_payment_intent_id": "0195d5a8-1c2d-7e3f-8a4b-5c6d7e8f9a0b"
+  },
+  "payment_method": "pm_1QK1ZXJt8fA2kVnlq2Wf8Ytr",
+  "status": "succeeded"
+}
