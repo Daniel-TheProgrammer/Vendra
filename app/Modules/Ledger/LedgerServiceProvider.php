@@ -11,6 +11,7 @@ use App\Modules\Ledger\Infrastructure\Listeners\OpenChartOfAccounts;
 use App\Modules\Orders\Domain\Events\OrderCancelled;
 use App\Modules\Orders\Domain\Events\OrderPlaced;
 use App\Modules\Payments\Domain\Events\PaymentCaptured;
+use App\Modules\Payments\Domain\Events\RefundIssued;
 use App\Modules\Tenancy\Domain\Events\TenantCreated;
 use App\Shared\Infrastructure\Module\ModuleServiceProvider;
 use Illuminate\Support\Facades\Event;
@@ -33,6 +34,6 @@ final class LedgerServiceProvider extends ModuleServiceProvider
 
         Event::listen(TenantCreated::class, OpenChartOfAccounts::class);
         Event::listen([OrderPlaced::class, OrderCancelled::class], BookOrderLifecycle::class);
-        Event::listen(PaymentCaptured::class, BookPayments::class);
+        Event::listen([PaymentCaptured::class, RefundIssued::class], BookPayments::class);
     }
 }

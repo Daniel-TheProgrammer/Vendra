@@ -6,10 +6,12 @@ namespace App\Modules\Payments\Tests\Feature;
 
 use App\Modules\Payments\Application\Gateway\GatewayAccount;
 use App\Modules\Payments\Application\Gateway\GatewayBalanceTransaction;
+use App\Modules\Payments\Application\Gateway\GatewayRefund;
 use App\Modules\Payments\Application\Gateway\GatewayRejected;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
 use App\Modules\Payments\Domain\PaymentGatewayUnavailable;
 use App\Modules\Payments\Domain\PaymentIntentStatus;
+use App\Modules\Payments\Domain\RefundStatus;
 use App\Modules\Payments\Infrastructure\Gateway\Stripe\StripeGateway;
 use App\Shared\Domain\Money\Currency;
 use App\Shared\Domain\Money\Money;
@@ -229,6 +231,31 @@ final class StripeGatewayContractTest extends TestCase
             && str_contains(urldecode($request->url()), 'expand[0]=data.source')
             && ! str_contains($request->url(), 'starting_after'));
         Http::assertSent(static fn (Request $request): bool => str_contains($request->url(), 'starting_after=txn_3QK2AAJt8fA2kVnl1rF9gH0i'));
+    }
+
+    #[Test]
+    public function a_refund_is_requested_against_the_payment_intent_with_our_id(): void
+    {
+        Http::fake(['api.stripe.com/v1/refunds' => Http::response(self::fixture('refund.succeeded'))]);
+
+        $refund = $this->gateway()->refund($this->account, self::INTENT, Money::of(2500, Currency::USD), '0195d5b0-4e5f-7a6b-8c7d-9e0f1a2b3c4d', 'refund:0195d5b0');
+
+        self::assertSame(['re_3QK1ZBJt8fA2kVnl0rE5fD1a', self::INTENT, RefundStatus::Succeeded, 2500, '0195d5b0-4e5f-7a6b-8c7d-9e0f1a2b3c4d'], [$refund->reference, $refund->paymentRef, $refund->status, $refund->amount->amount, $refund->ourId]);
+        Http::assertSent(static fn (Request $request): bool => self::sentToStripe($request, 'POST', '/v1/refunds', 'refund:0195d5b0')
+            && $request->data() === ['payment_intent' => self::INTENT, 'amount' => 2500, 'metadata' => ['vendra_refund_id' => '0195d5b0-4e5f-7a6b-8c7d-9e0f1a2b3c4d']]);
+    }
+
+    #[Test]
+    public function a_payments_refunds_are_listed_with_failures_and_dashboard_refunds(): void
+    {
+        Http::fake(['api.stripe.com/v1/refunds*' => Http::response(self::fixture('refunds.list'))]);
+
+        $refunds = $this->gateway()->refunds($this->account, self::INTENT);
+
+        self::assertSame([RefundStatus::Failed, RefundStatus::Succeeded], array_map(static fn (GatewayRefund $r): RefundStatus => $r->status, $refunds));
+        self::assertSame(['expired_or_canceled_card', null], array_map(static fn (GatewayRefund $r): ?string => $r->failureCode, $refunds));
+        self::assertSame([null, '0195d5b0-4e5f-7a6b-8c7d-9e0f1a2b3c4d'], array_map(static fn (GatewayRefund $r): ?string => $r->ourId, $refunds));
+        Http::assertSent(static fn (Request $request): bool => self::sentToStripe($request, 'GET', '/v1/refunds', null) && str_contains($request->url(), 'payment_intent='.self::INTENT));
     }
 
     #[Test]

@@ -57,6 +57,9 @@ database enforces both.
 | `GET /payment-intents/{id}`             | `orders.view`        | ETag is the version.                                        |
 | `POST /payment-intents/{id}/capture`    | `payments.manage`    | Optional `If-Match`. 402 `payment-declined` on a decline.  |
 | `GET`, `PUT /payments/account`          | `payments.configure` | `{"account_id": "acct_…"}`. People only, never API keys.   |
+| `POST /payment-intents/{id}/refunds`    | `payments.manage`    | `{"amount": "25.00", "reason": "…"}`; no amount: the rest. |
+| `GET /refunds`                          | `orders.view`        | `?payment_intent_id=&status=&per_page=&cursor=`             |
+| `GET /refunds/{id}`                     | `orders.view`        |                                                             |
 | `PUT /payments/account/webhook-secret`  | `payments.configure` | `{"secret": "whsec_…", "previous_valid_hours": 24}`        |
 | `POST /webhooks/stripe`                 | signature            | Called by Stripe, not by clients.                           |
 
@@ -70,6 +73,7 @@ Errors that are specific to payments:
 | 409    | `payment-account-missing`     | The tenant has not connected an account.                     |
 | 409    | `payment-gateway-rejected`    | Stripe refused the request (e.g. capture before authorise).  |
 | 409    | `illegal-payment-transition`  | E.g. capturing an intent that already succeeded.             |
+| 409    | `refund-not-allowed`          | Not captured, or more than is left (`refundable` says how much). |
 | 503    | `payment-gateway-unavailable` | Stripe unreachable or failing. Retry with the same key.      |
 
 ## Money in the ledger
@@ -77,11 +81,43 @@ Errors that are specific to payments:
 | Event               | Entry                                                                                  |
 |---------------------|----------------------------------------------------------------------------------------|
 | Payment captured    | Dr Cash / Stripe Clearing (amount − fee), Dr Payment Fees (fee) / Cr Accounts Receivable |
+| Refund succeeded    | Dr Refunds (refund − tax share), Dr Tax Payable (tax share) / Cr Cash / Stripe Clearing  |
+
+The sale stays booked; Refunds is its contra-revenue account. A refund's tax
+share is allocated cumulatively, `floor(refunded so far × tax ÷ total)` minus
+the same before it, so any sequence of partial refunds returns exactly the
+order's tax (a property test checks 500 random sequences). Stripe keeps its fee
+on a refund, so Payment Fees is unchanged.
 
 When an order is cancelled while its customer is paying, cancelling releases
 the payment at Stripe. If the money was nonetheless captured first, the payment
 settles as `customer_credit`: it is credited to Customer Credits (owed back to
 the customer) instead of the cancelled order's receivable, and logged.
+
+## Refunds
+
+```
+pending ──► succeeded
+   └──────► failed
+```
+
+`POST /payment-intents/{id}/refunds` refunds part or all of a succeeded payment.
+What is left to refund is computed under the payment's row lock, counting
+pending refunds, and a database trigger refuses any refund that would take the
+total past the amount paid. The Stripe call is keyed on our refund id.
+
+- **Succeeded** (most card refunds, at once): `RefundIssued` is raised and the
+  ledger books it. The refund that returns the last of an order's payment moves
+  the order to `refunded`, which also gives back its stock if it never shipped.
+- **Pending** (some payment methods): nothing is booked until Stripe reports the
+  refund succeeded (`charge.refunded` / `charge.refund.updated`).
+- **Failed**: its amount can be refunded again; nothing is booked.
+- **Made in the Stripe dashboard**: the `charge.refunded` webhook syncs the
+  payment's refunds with Stripe's list, records the unknown one (reason
+  "Refunded at the payment provider", no `requested_by`), and books it like any
+  other.
+- **Held as customer credit**: refunding it books Dr Customer Credits / Cr Cash,
+  clearing what was owed back.
 
 ## Inbound webhooks
 
@@ -110,6 +146,7 @@ Processing (`StripeEventProcessor`):
 | `payment_intent.payment_failed`              | intent → `failed`, with the decline code   |
 | `payment_intent.canceled`                    | intent → `cancelled`                       |
 | `charge.dispute.created`                     | intent marked disputed, `PaymentDisputed`  |
+| `charge.refunded`, `charge.refund.updated`   | refunds synced with Stripe's list, booked  |
 | anything else                                | stored, outcome `ignored`                  |
 
 **Out of order.** Each event carries Stripe's `created` time. An intent

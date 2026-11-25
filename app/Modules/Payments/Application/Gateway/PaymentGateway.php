@@ -55,6 +55,26 @@ interface PaymentGateway
     public function cancel(GatewayAccount $account, string $gatewayRef, string $idempotencyKey): GatewayIntent;
 
     /**
+     * Gives back part or all of a captured payment.
+     *
+     * @param  string  $reference  our refund id, kept by the provider as metadata
+     *
+     * @throws PaymentGatewayUnavailable
+     * @throws GatewayRejected when the provider will not refund (more than is left, say)
+     */
+    public function refund(GatewayAccount $account, string $gatewayRef, Money $amount, string $reference, string $idempotencyKey): GatewayRefund;
+
+    /**
+     * Every refund of a payment, including those made outside Vendra (in
+     * the provider's dashboard).
+     *
+     * @return list<GatewayRefund>
+     *
+     * @throws PaymentGatewayUnavailable
+     */
+    public function refunds(GatewayAccount $account, string $gatewayRef): array;
+
+    /**
      * Every movement on the account's balance since the instant, oldest
      * first; for reconciliation.
      *

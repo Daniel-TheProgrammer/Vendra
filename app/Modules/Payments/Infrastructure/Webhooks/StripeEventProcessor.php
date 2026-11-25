@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Payments\Infrastructure\Webhooks;
 
 use App\Modules\Payments\Application\Actions\RecordDispute;
+use App\Modules\Payments\Application\Actions\SyncRefunds;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
 use App\Modules\Payments\Application\Services\PaymentAccounts;
 use App\Modules\Payments\Application\Services\PaymentSettlement;
@@ -27,6 +28,7 @@ use Throwable;
  *   payment_intent.payment_failed                          → failed
  *   payment_intent.canceled                                → cancelled
  *   charge.dispute.created                                 → the payment is marked disputed
+ *   charge.refunded, charge.refund.updated                 → refunds synced with the provider's list
  *   anything else                                          → stored, marked ignored
  *
  * Every status change goes through PaymentSettlement with the event's own
@@ -44,9 +46,16 @@ final readonly class StripeEventProcessor
         'payment_intent.canceled',
     ];
 
+    /** About the charge (data.object), which names its payment intent. */
+    private const REFUND_EVENTS = [
+        'charge.refunded',
+        'charge.refund.updated',
+    ];
+
     public function __construct(
         private PaymentSettlement $settlement,
         private RecordDispute $recordDispute,
+        private SyncRefunds $syncRefunds,
         private PaymentAccounts $accounts,
         private PaymentGateway $gateway,
         private Clock $clock,
@@ -68,6 +77,7 @@ final readonly class StripeEventProcessor
             $outcome = match (true) {
                 in_array($event->type, self::INTENT_EVENTS, true) => $this->intentChanged($event),
                 $event->type === 'charge.dispute.created' => $this->disputeCreated($event),
+                in_array($event->type, self::REFUND_EVENTS, true) => $this->refundsChanged($event),
                 default => PaymentEventRecord::OUTCOME_IGNORED,
             };
         } catch (Throwable $failure) {
@@ -131,6 +141,23 @@ final readonly class StripeEventProcessor
         return ($this->recordDispute)($intent->id, $amount, $reason, $event->gateway_created_at)
             ? PaymentEventRecord::OUTCOME_APPLIED
             : PaymentEventRecord::OUTCOME_IGNORED;
+    }
+
+    /**
+     * The event says something about the charge's refunds; the provider's
+     * list of them is the truth to sync with (it also brings refunds made
+     * in the dashboard, which Vendra has never seen).
+     */
+    private function refundsChanged(PaymentEventRecord $event): string
+    {
+        $charge = $event->object();
+        $intent = $this->findIntent(['id' => $charge['payment_intent'] ?? null]);
+
+        if (! $intent instanceof PaymentIntent) {
+            return $this->unmatched($event, $charge['payment_intent'] ?? null);
+        }
+
+        return ($this->syncRefunds)($intent) > 0 ? PaymentEventRecord::OUTCOME_APPLIED : PaymentEventRecord::OUTCOME_IGNORED;
     }
 
     /**
