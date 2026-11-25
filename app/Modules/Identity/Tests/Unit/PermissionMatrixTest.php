@@ -63,7 +63,7 @@ final class PermissionMatrixTest extends TestCase
     #[Test]
     public function people_only_permissions_have_no_scope(): void
     {
-        foreach ([Permission::MembersManage, Permission::ApiKeysManage, Permission::LedgerPost] as $permission) {
+        foreach ([Permission::MembersManage, Permission::ApiKeysManage, Permission::LedgerPost, Permission::PaymentsConfigure] as $permission) {
             self::assertNull($permission->scope(), $permission->value.' must never be grantable to an API key');
         }
     }

@@ -24,6 +24,7 @@ enum Permission: string
     case LedgerView = 'ledger.view';
     case LedgerPost = 'ledger.post';
     case PaymentsManage = 'payments.manage';
+    case PaymentsConfigure = 'payments.configure';
     case WebhooksManage = 'webhooks.manage';
     case ReportsView = 'reports.view';
 
@@ -39,7 +40,7 @@ enum Permission: string
             self::PaymentsManage => ApiScope::PaymentsWrite,
             self::WebhooksManage => ApiScope::WebhooksManage,
             self::ReportsView => ApiScope::ReportsRead,
-            self::MembersView, self::MembersManage, self::ApiKeysManage, self::LedgerPost => null,
+            self::MembersView, self::MembersManage, self::ApiKeysManage, self::LedgerPost, self::PaymentsConfigure => null,
         };
     }
 }

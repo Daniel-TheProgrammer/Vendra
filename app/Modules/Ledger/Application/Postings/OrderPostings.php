@@ -22,13 +22,11 @@ use DateTimeInterface;
  *   placed    Dr Accounts Receivable  total
  *               Cr Sales Revenue        subtotal
  *               Cr Tax Payable          tax (when there is any)
- *   paid      Dr Cash / Stripe Clearing  total
- *               Cr Accounts Receivable     total
  *   cancelled the "placed" entry is reversed (nothing was paid)
- *   refunded  the "placed" and "paid" entries are reversed: revenue, tax,
- *             receivable and cash all return to where they were
  *
- * Payment fees are booked by the Payments module (Phase 6), which knows them.
+ * The order becoming paid or refunded books nothing here: the money moves
+ * through the payment provider, and PaymentPostings books it from the
+ * Payments events, which carry the fee and the amount actually refunded.
  */
 final readonly class OrderPostings
 {
@@ -67,31 +65,9 @@ final readonly class OrderPostings
         return ($this->post)($entry->post(), $this->meta($order, 'placed', $order->placedAt));
     }
 
-    public function paid(OrderSummary $order): ?JournalEntryRecord
-    {
-        if (! $order->total->isPositive()) {
-            return null;
-        }
-
-        $currency = $order->total->currency;
-        $entry = JournalEntry::draft($currency, sprintf('Order %d paid', $order->number))
-            ->debit($this->accounts->get(ChartOfAccounts::CASH_CLEARING, $currency)->id, $order->total)
-            ->credit($this->accounts->get(ChartOfAccounts::ACCOUNTS_RECEIVABLE, $currency)->id, $order->total);
-
-        return ($this->post)($entry->post(), $this->meta($order, 'paid'));
-    }
-
     public function cancelled(OrderSummary $order): void
     {
         $this->transaction->run(fn () => $this->reverseIfPosted($order, 'placed', 'Order cancelled'));
-    }
-
-    public function refunded(OrderSummary $order): void
-    {
-        $this->transaction->run(function () use ($order): void {
-            $this->reverseIfPosted($order, 'paid', 'Order refunded');
-            $this->reverseIfPosted($order, 'placed', 'Order refunded');
-        });
     }
 
     /**

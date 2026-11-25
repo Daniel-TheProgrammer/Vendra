@@ -71,15 +71,16 @@ domain events, keyed so a redelivered event books once:
 | Event | Key | Entry |
 |---|---|---|
 | `OrderPlaced` | `order:{id}:placed` | Dr Accounts Receivable (total) / Cr Sales Revenue (subtotal), Cr Tax Payable (tax) |
-| `OrderPaid` | `order:{id}:paid` | Dr Cash / Stripe Clearing / Cr Accounts Receivable (total) |
 | `OrderCancelled` | `reversal:{placed entry}` | Reverses the placed entry |
-| `OrderRefunded` | `reversal:{…}` | Reverses the paid entry, then the placed entry |
+| `PaymentCaptured` | `payment:{intent}:captured` | Dr Cash / Stripe Clearing (amount − fee), Dr Payment Fees (fee) / Cr Accounts Receivable (amount); Cr Customer Credits instead when the order was cancelled while the customer paid |
 
-Payment fees are booked by the Payments module (Phase 6), the only module that
-knows them. Today listeners run in-process, inside the request's transaction
-(ADR 0007). If a posting fails, the business change that caused it rolls back
-too. With the outbox (Phase 7), they will run from it with retries, which the
-keys already make safe.
+*Amended 2026-11-25 (ADR 0009).* Money is booked from the Payments events, not
+from the order's status: `OrderPaid` and `OrderRefunded` book nothing. Only the
+payment knows the fee the provider kept, and what was actually refunded.
+Today listeners run in-process, inside the request's transaction (ADR 0007). If
+a posting fails, the business change that caused it rolls back too. With the
+outbox (Phase 7), they will run from it with retries, which the keys already
+make safe.
 
 **Materialised balances.** `account_balances` holds running debit and credit
 totals per account. They are updated by `PostJournalEntry` in the posting's

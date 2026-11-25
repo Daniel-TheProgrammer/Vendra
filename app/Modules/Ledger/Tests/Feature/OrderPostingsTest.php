@@ -153,23 +153,24 @@ final class OrderPostingsTest extends TestCase
         self::assertSame([EntryKind::System, EntryKind::Reversal], $kinds);
     }
 
+    /**
+     * The money is booked from the Payments events (PaymentPostings), which
+     * know the provider's fee and what was actually refunded. The order's
+     * own status changes must not book it a second time.
+     */
     #[Test]
-    public function payment_moves_the_receivable_into_cash_and_a_refund_unwinds_everything(): void
+    public function the_order_becoming_paid_or_refunded_books_nothing_by_itself(): void
     {
         $id = $this->place(4);
 
         $this->asTenant(function () use ($id): void {
             $this->app->make(RequestPayment::class)($id);
             $this->app->make(RecordPayment::class)($id, 'pi_1');
+            $this->app->make(RefundOrder::class)($id, 're_1');
         });
 
-        self::assertSame(['cash' => 12000, 'receivable' => 0, 'tax' => 2000, 'revenue' => 10000], $this->balances());
-
-        $this->asTenant(fn () => $this->app->make(RefundOrder::class)($id, 're_1'));
-
-        self::assertSame(['cash' => 0, 'receivable' => 0, 'tax' => 0, 'revenue' => 0], $this->balances());
-        self::assertSame(4, $this->asTenant(static fn (): int => JournalEntryRecord::query()->where('reference_id', $id)->count()));
+        self::assertSame(['cash' => 0, 'receivable' => 12000, 'tax' => 2000, 'revenue' => 10000], $this->balances());
+        self::assertSame(1, $this->asTenant(static fn (): int => JournalEntryRecord::query()->count()));
         self::assertSame(0, $this->trialBalance());
-        $this->runArtisan('ledger:reconcile')->assertSuccessful();
     }
 }
