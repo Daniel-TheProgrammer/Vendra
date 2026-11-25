@@ -1,0 +1,26 @@
+{
+  "id": "evt_3QK1ZBJt8fA2kVnl0dS7pU3e",
+  "object": "event",
+  "account": "acct_1TestMerchant42",
+  "api_version": "2024-06-20",
+  "created": 1764147600,
+  "data": {
+    "object": {
+      "id": "du_3QK1ZBJt8fA2kVnl0eQ6rW2x",
+      "object": "dispute",
+      "amount": 10000,
+      "charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+      "created": 1764147600,
+      "currency": "usd",
+      "is_charge_refundable": false,
+      "livemode": false,
+      "payment_intent": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+      "reason": "fraudulent",
+      "status": "needs_response"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {"id": null, "idempotency_key": null},
+  "type": "charge.dispute.created"
+}

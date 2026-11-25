@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Payments\Infrastructure\Gateway\Stripe;
 
+use App\Modules\Payments\Application\Gateway\GatewayBalanceTransaction;
 use App\Modules\Payments\Application\Gateway\GatewayIntent;
 use App\Modules\Payments\Domain\PaymentIntentStatus;
 use App\Shared\Domain\Money\Currency;
 use App\Shared\Domain\Money\Money;
+use Carbon\CarbonImmutable;
 use UnexpectedValueException;
 
 /**
@@ -47,6 +49,31 @@ final class StripeObjects
             fee: self::fee($object, $currency),
             failureCode: $failed ? self::failureCode($error) : null,
             failureMessage: $failed && is_string($error['message'] ?? null) ? $error['message'] : null,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $object  a balance_transaction, source expanded
+     */
+    public static function balanceTransaction(array $object): GatewayBalanceTransaction
+    {
+        $currency = Currency::tryFrom(strtoupper(self::string($object, 'currency')))
+            ?? throw new UnexpectedValueException(sprintf('Balance transaction %s is in a currency Vendra does not price in.', self::string($object, 'id')));
+        $source = is_array($object['source'] ?? null) ? $object['source'] : [];
+        $paymentRef = $source['payment_intent'] ?? null;
+
+        return new GatewayBalanceTransaction(
+            id: self::string($object, 'id'),
+            type: match (self::string($object, 'type')) {
+                'charge', 'payment' => GatewayBalanceTransaction::CHARGE,
+                'refund', 'payment_refund' => GatewayBalanceTransaction::REFUND,
+                default => self::string($object, 'type'),
+            },
+            amount: Money::of(self::int($object, 'amount'), $currency),
+            fee: Money::of(self::int($object, 'fee'), $currency),
+            net: Money::of(self::int($object, 'net'), $currency),
+            paymentRef: is_string($paymentRef) ? $paymentRef : null,
+            createdAt: CarbonImmutable::createFromTimestampUTC(self::int($object, 'created')),
         );
     }
 

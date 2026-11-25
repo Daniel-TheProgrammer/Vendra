@@ -1,0 +1,42 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "txn_3QK1ZBJt8fA2kVnl0mN4pQ7r",
+      "object": "balance_transaction",
+      "amount": 10000,
+      "available_on": 1764633600,
+      "created": 1764061260,
+      "currency": "usd",
+      "fee": 320,
+      "net": 9680,
+      "reporting_category": "charge",
+      "source": {
+        "id": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+        "object": "charge",
+        "amount": 10000,
+        "currency": "usd",
+        "payment_intent": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+        "status": "succeeded"
+      },
+      "status": "pending",
+      "type": "charge"
+    },
+    {
+      "id": "txn_1QJzzzJt8fA2kVnlPayout01",
+      "object": "balance_transaction",
+      "amount": -50000,
+      "available_on": 1764000000,
+      "created": 1764000000,
+      "currency": "usd",
+      "fee": 0,
+      "net": -50000,
+      "reporting_category": "payout",
+      "source": "po_1QJzzzJt8fA2kVnlPayout01",
+      "status": "available",
+      "type": "payout"
+    }
+  ],
+  "has_more": false,
+  "url": "/v1/balance_transactions"
+}

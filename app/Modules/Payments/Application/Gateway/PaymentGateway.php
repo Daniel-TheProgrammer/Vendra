@@ -6,6 +6,7 @@ namespace App\Modules\Payments\Application\Gateway;
 
 use App\Modules\Payments\Domain\PaymentGatewayUnavailable;
 use App\Shared\Domain\Money\Money;
+use Carbon\CarbonImmutable;
 
 /**
  * The payment provider, as Payments needs it. StripeGateway talks to Stripe;
@@ -52,4 +53,14 @@ interface PaymentGateway
      * @throws GatewayRejected when the intent already succeeded
      */
     public function cancel(GatewayAccount $account, string $gatewayRef, string $idempotencyKey): GatewayIntent;
+
+    /**
+     * Every movement on the account's balance since the instant, oldest
+     * first; for reconciliation.
+     *
+     * @return iterable<GatewayBalanceTransaction>
+     *
+     * @throws PaymentGatewayUnavailable
+     */
+    public function balanceTransactions(GatewayAccount $account, CarbonImmutable $since): iterable;
 }

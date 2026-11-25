@@ -1,0 +1,33 @@
+{
+  "id": "evt_3QK1ZBJt8fA2kVnl0pF2aI1d",
+  "object": "event",
+  "account": "acct_1TestMerchant42",
+  "api_version": "2024-06-20",
+  "created": 1764061230,
+  "data": {
+    "object": {
+      "id": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+      "object": "payment_intent",
+      "amount": 10000,
+      "capture_method": "manual",
+      "created": 1764061200,
+      "currency": "usd",
+      "last_payment_error": {
+        "code": "card_declined",
+        "decline_code": "generic_decline",
+        "message": "Your card was declined.",
+        "type": "card_error"
+      },
+      "latest_charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+      "livemode": false,
+      "metadata": {
+        "vendra_payment_intent_id": "0195d5a8-1c2d-7e3f-8a4b-5c6d7e8f9a0b"
+      },
+      "status": "requires_payment_method"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {"id": null, "idempotency_key": null},
+  "type": "payment_intent.payment_failed"
+}

@@ -6,6 +6,7 @@ namespace App\Modules\Payments;
 
 use App\Modules\Orders\Domain\Events\OrderCancelled;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
+use App\Modules\Payments\Console\ReconcilePaymentsCommand;
 use App\Modules\Payments\Infrastructure\Gateway\FakeGateway;
 use App\Modules\Payments\Infrastructure\Gateway\Stripe\StripeGateway;
 use App\Modules\Payments\Infrastructure\Listeners\ReleasePaymentsOfCancelledOrder;
@@ -22,6 +23,11 @@ final class PaymentsServiceProvider extends ModuleServiceProvider
     protected function moduleName(): string
     {
         return 'Payments';
+    }
+
+    protected function moduleCommands(): array
+    {
+        return [ReconcilePaymentsCommand::class];
     }
 
     public function register(): void

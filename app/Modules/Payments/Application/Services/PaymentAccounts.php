@@ -8,6 +8,7 @@ use App\Modules\Payments\Application\Gateway\GatewayAccount;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
 use App\Modules\Payments\Domain\PaymentAccountMissing;
 use App\Modules\Payments\Infrastructure\Models\PaymentAccount;
+use App\Shared\Application\Clock\Clock;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Contracts\Config\Repository as Config;
 use LogicException;
@@ -26,6 +27,7 @@ final readonly class PaymentAccounts
         private TenantContext $tenant,
         private PaymentGateway $gateway,
         private Config $config,
+        private Clock $clock,
     ) {}
 
     /**
@@ -56,6 +58,31 @@ final readonly class PaymentAccounts
         ])->save();
 
         return $account;
+    }
+
+    /**
+     * Sets the signing secret of the tenant's webhook endpoint, keeping the
+     * previous one valid for $overlapHours (docs/payments.md, "Rotating the
+     * webhook secret").
+     *
+     * @throws PaymentAccountMissing
+     */
+    public function rotateWebhookSecret(string $secret, int $overlapHours): PaymentAccount
+    {
+        $account = $this->find() ?? throw PaymentAccountMissing::forTenant();
+        $account->rotateWebhookSecret($secret, $this->clock->now(), $overlapHours);
+        $account->save();
+
+        return $account;
+    }
+
+    /**
+     * The account an inbound webhook names, in whichever tenant owns it.
+     * The only read of this table that crosses tenants.
+     */
+    public function findByProviderAccount(string $accountId): ?PaymentAccount
+    {
+        return PaymentAccount::query()->where('account_lookup', $this->lookup($accountId))->first();
     }
 
     public function lookup(string $accountId): string

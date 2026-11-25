@@ -1,0 +1,29 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "txn_3QK2AAJt8fA2kVnl1rF9gH0i",
+      "object": "balance_transaction",
+      "amount": -2500,
+      "available_on": 1764633600,
+      "created": 1764147600,
+      "currency": "usd",
+      "fee": 0,
+      "net": -2500,
+      "reporting_category": "refund",
+      "source": {
+        "id": "re_3QK1ZBJt8fA2kVnl0rE5fD1a",
+        "object": "refund",
+        "amount": 2500,
+        "charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+        "currency": "usd",
+        "payment_intent": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+        "status": "succeeded"
+      },
+      "status": "pending",
+      "type": "refund"
+    }
+  ],
+  "has_more": true,
+  "url": "/v1/balance_transactions"
+}
