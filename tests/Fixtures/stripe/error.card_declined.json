@@ -1,0 +1,30 @@
+{
+  "error": {
+    "code": "card_declined",
+    "decline_code": "insufficient_funds",
+    "doc_url": "https://stripe.com/docs/error-codes/card-declined",
+    "message": "Your card has insufficient funds.",
+    "payment_intent": {
+      "id": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+      "object": "payment_intent",
+      "amount": 10000,
+      "capture_method": "manual",
+      "created": 1764061200,
+      "currency": "usd",
+      "last_payment_error": {
+        "code": "card_declined",
+        "decline_code": "insufficient_funds",
+        "message": "Your card has insufficient funds.",
+        "type": "card_error"
+      },
+      "latest_charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+      "livemode": false,
+      "metadata": {
+        "vendra_payment_intent_id": "0195d5a8-1c2d-7e3f-8a4b-5c6d7e8f9a0b"
+      },
+      "status": "requires_payment_method"
+    },
+    "request_log_url": "https://dashboard.stripe.com/test/logs/req_8Hq2LmN4pR6sT0",
+    "type": "card_error"
+  }
+}

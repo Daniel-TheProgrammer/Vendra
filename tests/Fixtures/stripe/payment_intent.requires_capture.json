@@ -1,0 +1,19 @@
+{
+  "id": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+  "object": "payment_intent",
+  "amount": 10000,
+  "amount_capturable": 10000,
+  "amount_received": 0,
+  "capture_method": "manual",
+  "client_secret": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e_secret_9XoQb1Lr3nUeTzA7sK2dPv5Wm",
+  "created": 1764061200,
+  "currency": "usd",
+  "last_payment_error": null,
+  "latest_charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+  "livemode": false,
+  "metadata": {
+    "vendra_payment_intent_id": "0195d5a8-1c2d-7e3f-8a4b-5c6d7e8f9a0b"
+  },
+  "payment_method": "pm_1QK1ZXJt8fA2kVnlq2Wf8Ytr",
+  "status": "requires_capture"
+}
