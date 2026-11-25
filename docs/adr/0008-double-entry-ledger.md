@@ -73,6 +73,7 @@ domain events, keyed so a redelivered event books once:
 | `OrderPlaced` | `order:{id}:placed` | Dr Accounts Receivable (total) / Cr Sales Revenue (subtotal), Cr Tax Payable (tax) |
 | `OrderCancelled` | `reversal:{placed entry}` | Reverses the placed entry |
 | `PaymentCaptured` | `payment:{intent}:captured` | Dr Cash / Stripe Clearing (amount − fee), Dr Payment Fees (fee) / Cr Accounts Receivable (amount); Cr Customer Credits instead when the order was cancelled while the customer paid |
+| `RefundIssued` | `refund:{refund}:succeeded` | Dr Refunds (refund − tax share), Dr Tax Payable (tax share) / Cr Cash / Stripe Clearing; Dr Customer Credits for the whole refund when the money was held as credit |
 
 *Amended 2026-11-25 (ADR 0009).* Money is booked from the Payments events, not
 from the order's status: `OrderPaid` and `OrderRefunded` book nothing. Only the

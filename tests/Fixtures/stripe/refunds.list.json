@@ -1,0 +1,32 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "re_3QK3BBJt8fA2kVnl2xY7zA0b",
+      "object": "refund",
+      "amount": 1000,
+      "charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+      "created": 1764234000,
+      "currency": "usd",
+      "failure_reason": "expired_or_canceled_card",
+      "metadata": {},
+      "payment_intent": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+      "status": "failed"
+    },
+    {
+      "id": "re_3QK1ZBJt8fA2kVnl0rE5fD1a",
+      "object": "refund",
+      "amount": 2500,
+      "charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+      "created": 1764147600,
+      "currency": "usd",
+      "metadata": {
+        "vendra_refund_id": "0195d5b0-4e5f-7a6b-8c7d-9e0f1a2b3c4d"
+      },
+      "payment_intent": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+      "status": "succeeded"
+    }
+  ],
+  "has_more": false,
+  "url": "/v1/refunds"
+}

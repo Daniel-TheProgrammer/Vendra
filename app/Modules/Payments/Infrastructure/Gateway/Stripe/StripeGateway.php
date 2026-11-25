@@ -6,6 +6,7 @@ namespace App\Modules\Payments\Infrastructure\Gateway\Stripe;
 
 use App\Modules\Payments\Application\Gateway\GatewayAccount;
 use App\Modules\Payments\Application\Gateway\GatewayIntent;
+use App\Modules\Payments\Application\Gateway\GatewayRefund;
 use App\Modules\Payments\Application\Gateway\GatewayRejected;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
 use App\Modules\Payments\Domain\PaymentGatewayUnavailable;
@@ -91,6 +92,34 @@ final readonly class StripeGateway implements PaymentGateway
         return StripeObjects::paymentIntent($this->send(fn (): Response => $this->request($account, $idempotencyKey)->post(
             '/v1/payment_intents/'.rawurlencode($gatewayRef).'/cancel',
         )));
+    }
+
+    public function refund(GatewayAccount $account, string $gatewayRef, Money $amount, string $reference, string $idempotencyKey): GatewayRefund
+    {
+        return StripeObjects::refund($this->send(fn (): Response => $this->request($account, $idempotencyKey)->post('/v1/refunds', [
+            'payment_intent' => $gatewayRef,
+            'amount' => $amount->amount,
+            'metadata' => ['vendra_refund_id' => $reference],
+        ])));
+    }
+
+    /**
+     * GET /v1/refunds?payment_intent=…; a payment has a handful of refunds
+     * at most, so one page of 100 holds them all.
+     */
+    public function refunds(GatewayAccount $account, string $gatewayRef): array
+    {
+        $list = $this->send(fn (): Response => $this->request($account)->get('/v1/refunds', ['payment_intent' => $gatewayRef, 'limit' => 100]));
+        $refunds = [];
+
+        foreach (is_array($list['data'] ?? null) ? $list['data'] : [] as $object) {
+            if (is_array($object)) {
+                /** @var array<string, mixed> $object */
+                $refunds[] = StripeObjects::refund($object);
+            }
+        }
+
+        return $refunds;
     }
 
     /**

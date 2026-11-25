@@ -89,7 +89,7 @@ final readonly class ReconcilePayments
 
         foreach ($this->currencies($providerNet) as $currency) {
             $provider = $providerNet[$currency->value] ?? Money::zero($currency);
-            $ledger = ($this->movement)(ChartOfAccounts::CASH_CLEARING, $currency, $since, [PaymentPostings::REFERENCE_TYPE]);
+            $ledger = ($this->movement)(ChartOfAccounts::CASH_CLEARING, $currency, $since, [PaymentPostings::REFERENCE_TYPE, PaymentPostings::REFUND_REFERENCE_TYPE]);
 
             if (! $provider->equals($ledger)) {
                 $discrepancies[] = new PaymentDiscrepancy($tenantId, PaymentDiscrepancy::CLEARING_MISMATCH, $currency->value, sprintf('Provider net %s, ledger Cash / Stripe Clearing %s.', $provider->toDecimal(), $ledger->toDecimal()));

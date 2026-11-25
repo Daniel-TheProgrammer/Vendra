@@ -6,7 +6,9 @@ namespace App\Modules\Payments\Infrastructure\Gateway\Stripe;
 
 use App\Modules\Payments\Application\Gateway\GatewayBalanceTransaction;
 use App\Modules\Payments\Application\Gateway\GatewayIntent;
+use App\Modules\Payments\Application\Gateway\GatewayRefund;
 use App\Modules\Payments\Domain\PaymentIntentStatus;
+use App\Modules\Payments\Domain\RefundStatus;
 use App\Shared\Domain\Money\Currency;
 use App\Shared\Domain\Money\Money;
 use Carbon\CarbonImmutable;
@@ -49,6 +51,37 @@ final class StripeObjects
             fee: self::fee($object, $currency),
             failureCode: $failed ? self::failureCode($error) : null,
             failureMessage: $failed && is_string($error['message'] ?? null) ? $error['message'] : null,
+        );
+    }
+
+    /**
+     * Refund statuses: pending and requires_action wait, succeeded is done,
+     * failed and canceled gave nothing back.
+     *
+     * @param  array<string, mixed>  $object  a refund
+     */
+    public static function refund(array $object): GatewayRefund
+    {
+        $id = self::string($object, 'id');
+        $currency = Currency::tryFrom(strtoupper(self::string($object, 'currency')))
+            ?? throw new UnexpectedValueException(sprintf('Refund %s is in a currency Vendra does not price in.', $id));
+        $status = match (self::string($object, 'status')) {
+            'pending', 'requires_action' => RefundStatus::Pending,
+            'succeeded' => RefundStatus::Succeeded,
+            'failed', 'canceled' => RefundStatus::Failed,
+            default => throw new UnexpectedValueException(sprintf('Unknown Stripe refund status "%s".', self::string($object, 'status'))),
+        };
+        $metadata = is_array($object['metadata'] ?? null) ? $object['metadata'] : [];
+        $ours = $metadata['vendra_refund_id'] ?? null;
+        $failure = $object['failure_reason'] ?? null;
+
+        return new GatewayRefund(
+            reference: $id,
+            paymentRef: self::string($object, 'payment_intent'),
+            status: $status,
+            amount: Money::of(self::int($object, 'amount'), $currency),
+            ourId: is_string($ours) ? $ours : null,
+            failureCode: $status === RefundStatus::Failed ? (is_string($failure) ? $failure : 'refund_failed') : null,
         );
     }
 

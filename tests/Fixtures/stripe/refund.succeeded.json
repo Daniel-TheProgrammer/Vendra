@@ -1,0 +1,15 @@
+{
+  "id": "re_3QK1ZBJt8fA2kVnl0rE5fD1a",
+  "object": "refund",
+  "amount": 2500,
+  "balance_transaction": "txn_3QK2AAJt8fA2kVnl1rF9gH0i",
+  "charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+  "created": 1764147600,
+  "currency": "usd",
+  "metadata": {
+    "vendra_refund_id": "0195d5b0-4e5f-7a6b-8c7d-9e0f1a2b3c4d"
+  },
+  "payment_intent": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+  "reason": null,
+  "status": "succeeded"
+}

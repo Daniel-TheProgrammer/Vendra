@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Payments\Http\Controllers\PaymentAccountController;
 use App\Modules\Payments\Http\Controllers\PaymentIntentController;
+use App\Modules\Payments\Http\Controllers\RefundController;
 use App\Modules\Payments\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,11 +17,14 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth:sanctum,api-key', 'tenant'])->group(function (): void {
     Route::middleware('permission:orders.view')->group(function (): void {
         Route::get('payment-intents/{paymentIntent}', [PaymentIntentController::class, 'show'])->whereUuid('paymentIntent')->name('payment-intents.show');
+        Route::get('refunds', [RefundController::class, 'index'])->name('refunds.index');
+        Route::get('refunds/{refund}', [RefundController::class, 'show'])->whereUuid('refund')->name('refunds.show');
     });
 
     Route::middleware(['permission:payments.manage', 'idempotent'])->group(function (): void {
         Route::post('orders/{order}/payment-intents', [PaymentIntentController::class, 'store'])->whereUuid('order')->name('payment-intents.store');
         Route::post('payment-intents/{paymentIntent}/capture', [PaymentIntentController::class, 'capture'])->whereUuid('paymentIntent')->name('payment-intents.capture');
+        Route::post('payment-intents/{paymentIntent}/refunds', [RefundController::class, 'store'])->whereUuid('paymentIntent')->name('payment-intents.refunds.store');
     });
 
     Route::middleware('permission:payments.configure')->group(function (): void {

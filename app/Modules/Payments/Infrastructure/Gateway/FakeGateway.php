@@ -7,10 +7,12 @@ namespace App\Modules\Payments\Infrastructure\Gateway;
 use App\Modules\Payments\Application\Gateway\GatewayAccount;
 use App\Modules\Payments\Application\Gateway\GatewayBalanceTransaction;
 use App\Modules\Payments\Application\Gateway\GatewayIntent;
+use App\Modules\Payments\Application\Gateway\GatewayRefund;
 use App\Modules\Payments\Application\Gateway\GatewayRejected;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
 use App\Modules\Payments\Domain\PaymentGatewayUnavailable;
 use App\Modules\Payments\Domain\PaymentIntentStatus;
+use App\Modules\Payments\Domain\RefundStatus;
 use App\Shared\Application\Clock\Clock;
 use App\Shared\Domain\Money\Currency;
 use App\Shared\Domain\Money\Money;
@@ -101,6 +103,134 @@ final readonly class FakeGateway implements PaymentGateway
         return $this->toIntent($this->collect($account, $intent));
     }
 
+    public function refund(GatewayAccount $account, string $gatewayRef, Money $amount, string $reference, string $idempotencyKey): GatewayRefund
+    {
+        $this->interruptIfAsked();
+
+        $existing = $this->cache->get(self::PREFIX.'key:'.$account->accountId.':'.$idempotencyKey);
+
+        if (is_string($existing)) {
+            foreach ($this->refundsOf($account, $gatewayRef) as $refund) {
+                if ($refund['id'] === $existing) {
+                    return $this->toRefund($refund);
+                }
+            }
+        }
+
+        $refund = $this->issueRefund($account, $gatewayRef, $amount->amount, $reference);
+        $this->cache->put(self::PREFIX.'key:'.$account->accountId.':'.$idempotencyKey, $refund['id'], self::TTL_SECONDS);
+
+        return $this->toRefund($refund);
+    }
+
+    public function refunds(GatewayAccount $account, string $gatewayRef): array
+    {
+        $this->interruptIfAsked();
+        $this->load($account, $gatewayRef);
+
+        return array_map($this->toRefund(...), $this->refundsOf($account, $gatewayRef));
+    }
+
+    /**
+     * Someone refunds in the provider's dashboard, outside Vendra.
+     */
+    public function refundAtProvider(GatewayAccount $account, string $gatewayRef, int $amount): string
+    {
+        return $this->issueRefund($account, $gatewayRef, $amount, null)['id'];
+    }
+
+    /**
+     * New refunds stay pending until settleRefund(), as bank transfers do.
+     */
+    public function holdRefunds(): void
+    {
+        $this->cache->put(self::PREFIX.'hold-refunds', true, self::TTL_SECONDS);
+    }
+
+    public function settleRefund(GatewayAccount $account, string $gatewayRef, string $refundRef, RefundStatus $status): void
+    {
+        $refunds = $this->refundsOf($account, $gatewayRef);
+
+        foreach ($refunds as $index => $refund) {
+            if ($refund['id'] === $refundRef) {
+                $refunds[$index]['status'] = $status->value;
+
+                if ($status === RefundStatus::Succeeded) {
+                    $this->move($account, GatewayBalanceTransaction::REFUND, -$refund['amount'], 0, $this->load($account, $gatewayRef));
+                }
+            }
+        }
+
+        $this->cache->put(self::PREFIX.'refunds:'.$account->accountId.':'.$gatewayRef, $refunds, self::TTL_SECONDS);
+    }
+
+    /**
+     * @return array{id: string, payment_ref: string, amount: int, currency: string, status: string, reference: string|null}
+     */
+    private function issueRefund(GatewayAccount $account, string $gatewayRef, int $amount, ?string $reference): array
+    {
+        $intent = $this->load($account, $gatewayRef);
+
+        if ($intent['status'] !== PaymentIntentStatus::Succeeded->value) {
+            throw GatewayRejected::because('charge_not_refundable', 'This PaymentIntent has not been captured; there is nothing to refund.');
+        }
+
+        $refunds = $this->refundsOf($account, $gatewayRef);
+        $refunded = array_sum(array_map(static fn (array $r): int => $r['status'] === RefundStatus::Failed->value ? 0 : $r['amount'], $refunds));
+
+        if ($amount > $intent['amount'] - $refunded) {
+            throw GatewayRejected::because('amount_too_large', sprintf('Refund amount (%d) is greater than unrefunded amount on charge (%d).', $amount, $intent['amount'] - $refunded));
+        }
+
+        $held = $this->cache->get(self::PREFIX.'hold-refunds') === true;
+        $refund = [
+            'id' => 're_fake_'.Str::lower(Str::random(24)),
+            'payment_ref' => $gatewayRef,
+            'amount' => $amount,
+            'currency' => $intent['currency'],
+            'status' => ($held ? RefundStatus::Pending : RefundStatus::Succeeded)->value,
+            'reference' => $reference,
+        ];
+        $refunds[] = $refund;
+        $this->cache->put(self::PREFIX.'refunds:'.$account->accountId.':'.$gatewayRef, $refunds, self::TTL_SECONDS);
+
+        if (! $held) {
+            $this->move($account, GatewayBalanceTransaction::REFUND, -$amount, 0, $intent);
+        }
+
+        return $refund;
+    }
+
+    /**
+     * @return list<array{id: string, payment_ref: string, amount: int, currency: string, status: string, reference: string|null}>
+     */
+    private function refundsOf(GatewayAccount $account, string $gatewayRef): array
+    {
+        $refunds = $this->cache->get(self::PREFIX.'refunds:'.$account->accountId.':'.$gatewayRef, []);
+
+        if (! is_array($refunds)) {
+            return [];
+        }
+
+        /** @var list<array{id: string, payment_ref: string, amount: int, currency: string, status: string, reference: string|null}> $refunds */
+        return $refunds;
+    }
+
+    /**
+     * @param  array{id: string, payment_ref: string, amount: int, currency: string, status: string, reference: string|null}  $refund
+     */
+    private function toRefund(array $refund): GatewayRefund
+    {
+        return new GatewayRefund(
+            reference: $refund['id'],
+            paymentRef: $refund['payment_ref'],
+            status: RefundStatus::from($refund['status']),
+            amount: Money::of($refund['amount'], Currency::from($refund['currency'])),
+            ourId: $refund['reference'],
+            failureCode: $refund['status'] === RefundStatus::Failed->value ? 'expired_or_canceled_card' : null,
+        );
+    }
+
     public function balanceTransactions(GatewayAccount $account, CarbonImmutable $since): iterable
     {
         $this->interruptIfAsked();
@@ -148,19 +278,27 @@ final readonly class FakeGateway implements PaymentGateway
         $intent['fee'] = min($intent['amount'], intdiv($intent['amount'] * 29 + 500, 1000) + 30);
         $this->store($account, $intent);
 
+        $this->move($account, GatewayBalanceTransaction::CHARGE, $intent['amount'], $intent['fee'], $intent);
+
+        return $intent;
+    }
+
+    /**
+     * @param  array{id: string, reference: string, amount: int, currency: string, status: string, client_secret: string, decline: string|null, fee: int|null}  $intent
+     */
+    private function move(GatewayAccount $account, string $type, int $amount, int $fee, array $intent): void
+    {
         $balance = $this->balance($account);
         $balance[] = [
             'id' => 'txn_fake_'.Str::lower(Str::random(24)),
-            'type' => GatewayBalanceTransaction::CHARGE,
-            'amount' => $intent['amount'],
-            'fee' => $intent['fee'],
+            'type' => $type,
+            'amount' => $amount,
+            'fee' => $fee,
             'currency' => $intent['currency'],
             'payment_ref' => $intent['id'],
             'created_at' => $this->clock->now()->toIso8601String(),
         ];
         $this->cache->put(self::PREFIX.'balance:'.$account->accountId, $balance, self::TTL_SECONDS);
-
-        return $intent;
     }
 
     /**
