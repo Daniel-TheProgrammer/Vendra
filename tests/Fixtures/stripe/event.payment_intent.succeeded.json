@@ -1,0 +1,34 @@
+{
+  "id": "evt_3QK1ZBJt8fA2kVnl0zR5sT8u",
+  "object": "event",
+  "account": "acct_1TestMerchant42",
+  "api_version": "2024-06-20",
+  "created": 1764061260,
+  "data": {
+    "object": {
+      "id": "pi_3QK1ZBJt8fA2kVnl0f4hXc2e",
+      "object": "payment_intent",
+      "amount": 10000,
+      "amount_capturable": 0,
+      "amount_received": 10000,
+      "capture_method": "manual",
+      "created": 1764061200,
+      "currency": "usd",
+      "last_payment_error": null,
+      "latest_charge": "ch_3QK1ZBJt8fA2kVnl0aB7cD9e",
+      "livemode": false,
+      "metadata": {
+        "vendra_payment_intent_id": "0195d5a8-1c2d-7e3f-8a4b-5c6d7e8f9a0b"
+      },
+      "payment_method": "pm_1QK1ZXJt8fA2kVnlq2Wf8Ytr",
+      "status": "succeeded"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_9Lm3Nq5Rt7Vx1Z",
+    "idempotency_key": "capture:0195d5a8-1c2d-7e3f-8a4b-5c6d7e8f9a0b"
+  },
+  "type": "payment_intent.succeeded"
+}

@@ -10,6 +10,7 @@ use App\Modules\Payments\Application\Gateway\GatewayRejected;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
 use App\Modules\Payments\Domain\PaymentGatewayUnavailable;
 use App\Shared\Domain\Money\Money;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as Http;
 use Illuminate\Http\Client\PendingRequest;
@@ -90,6 +91,38 @@ final readonly class StripeGateway implements PaymentGateway
         return StripeObjects::paymentIntent($this->send(fn (): Response => $this->request($account, $idempotencyKey)->post(
             '/v1/payment_intents/'.rawurlencode($gatewayRef).'/cancel',
         )));
+    }
+
+    /**
+     * GET /v1/balance_transactions, every page, with the source expanded so
+     * each movement names its payment intent.
+     */
+    public function balanceTransactions(GatewayAccount $account, CarbonImmutable $since): iterable
+    {
+        $page = [];
+        $startingAfter = null;
+
+        do {
+            $query = ['created' => ['gte' => $since->getTimestamp()], 'limit' => 100, 'expand' => ['data.source']];
+
+            if ($startingAfter !== null) {
+                $query['starting_after'] = $startingAfter;
+            }
+
+            $list = $this->send(fn (): Response => $this->request($account)->get('/v1/balance_transactions', $query));
+            $data = is_array($list['data'] ?? null) ? $list['data'] : [];
+
+            foreach ($data as $object) {
+                if (is_array($object)) {
+                    /** @var array<string, mixed> $object */
+                    $page[] = StripeObjects::balanceTransaction($object);
+                    $startingAfter = is_string($object['id'] ?? null) ? $object['id'] : $startingAfter;
+                }
+            }
+        } while (($list['has_more'] ?? false) === true && $data !== []);
+
+        // Stripe lists newest first.
+        return array_reverse($page);
     }
 
     private function request(GatewayAccount $account, ?string $idempotencyKey = null): PendingRequest

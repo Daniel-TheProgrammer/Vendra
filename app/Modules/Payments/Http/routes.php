@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Payments\Http\Controllers\PaymentAccountController;
 use App\Modules\Payments\Http\Controllers\PaymentIntentController;
+use App\Modules\Payments\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,5 +26,13 @@ Route::middleware(['auth:sanctum,api-key', 'tenant'])->group(function (): void {
     Route::middleware('permission:payments.configure')->group(function (): void {
         Route::get('payments/account', [PaymentAccountController::class, 'show'])->name('payments.account.show');
         Route::put('payments/account', [PaymentAccountController::class, 'update'])->name('payments.account.update');
+        Route::put('payments/account/webhook-secret', [PaymentAccountController::class, 'rotateWebhookSecret'])->name('payments.account.webhook-secret');
     });
 });
+
+/*
+ * Inbound gateway webhooks: no authentication, no tenant middleware. The
+ * signature is the credential and the tenant comes from the account the
+ * event names (ReceiveStripeEvent).
+ */
+Route::post('webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe');

@@ -30,4 +30,22 @@ final class PaymentAccountController
 
         return (new PaymentAccountResource($accounts->connect($request->string('account_id')->value())))->response($request);
     }
+
+    /**
+     * PUT /payments/account/webhook-secret {"secret": "whsec_…", "previous_valid_hours": 24}
+     *
+     * The previous secret keeps verifying for previous_valid_hours (0 ends
+     * it now), matching the overlap the provider gives when a secret is rolled.
+     */
+    public function rotateWebhookSecret(Request $request, PaymentAccounts $accounts): JsonResponse
+    {
+        $request->validate([
+            'secret' => ['required', 'string', 'regex:/^whsec_[A-Za-z0-9+\/=]{16,128}$/'],
+            'previous_valid_hours' => ['sometimes', 'integer', 'min:0', 'max:72'],
+        ]);
+
+        $account = $accounts->rotateWebhookSecret($request->string('secret')->value(), $request->integer('previous_valid_hours', 24));
+
+        return (new PaymentAccountResource($account))->response($request);
+    }
 }

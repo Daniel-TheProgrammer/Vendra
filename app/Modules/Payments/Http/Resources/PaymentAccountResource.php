@@ -29,6 +29,9 @@ final class PaymentAccountResource extends ApiResource
         return [
             'gateway' => $account->gateway,
             'account' => self::mask($account->account_id),
+            // Secrets are never shown, only whether one is set.
+            'webhook_secret_configured' => $account->webhook_secret !== null,
+            'previous_webhook_secret_expires_at' => $account->previous_webhook_secret_expires_at?->toIso8601String(),
             'connected_at' => $account->created_at?->toIso8601String(),
             'updated_at' => $account->updated_at?->toIso8601String(),
         ];

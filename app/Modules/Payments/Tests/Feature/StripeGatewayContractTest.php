@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Payments\Tests\Feature;
 
 use App\Modules\Payments\Application\Gateway\GatewayAccount;
+use App\Modules\Payments\Application\Gateway\GatewayBalanceTransaction;
 use App\Modules\Payments\Application\Gateway\GatewayRejected;
 use App\Modules\Payments\Application\Gateway\PaymentGateway;
 use App\Modules\Payments\Domain\PaymentGatewayUnavailable;
@@ -12,6 +13,7 @@ use App\Modules\Payments\Domain\PaymentIntentStatus;
 use App\Modules\Payments\Infrastructure\Gateway\Stripe\StripeGateway;
 use App\Shared\Domain\Money\Currency;
 use App\Shared\Domain\Money\Money;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\Request;
@@ -205,6 +207,28 @@ final class StripeGatewayContractTest extends TestCase
         Http::fake(static fn (): never => throw new ConnectionException('Connection timed out'));
         $this->expectException(PaymentGatewayUnavailable::class);
         $this->gateway()->capture($this->account, self::INTENT, 'capture:0195d5a8');
+    }
+
+    #[Test]
+    public function balance_transactions_are_read_across_pages_oldest_first(): void
+    {
+        Http::fakeSequence('api.stripe.com/v1/balance_transactions*')
+            ->push(self::fixture('balance_transactions.page1'))
+            ->push(self::fixture('balance_transactions.page2'));
+
+        $since = CarbonImmutable::createFromTimestampUTC(1763900000);
+        $movements = [...$this->gateway()->balanceTransactions($this->account, $since)];
+
+        self::assertSame(['payout', 'charge', 'refund'], array_map(static fn (GatewayBalanceTransaction $m): string => $m->type, $movements));
+        self::assertSame([null, self::INTENT, self::INTENT], array_map(static fn (GatewayBalanceTransaction $m): ?string => $m->paymentRef, $movements));
+        self::assertSame([9680, 320], [$movements[1]->net->amount, $movements[1]->fee->amount]);
+        self::assertSame(-2500, $movements[2]->net->amount);
+
+        Http::assertSent(static fn (Request $request): bool => self::sentToStripe($request, 'GET', '/v1/balance_transactions', null)
+            && str_contains(urldecode($request->url()), 'created[gte]=1763900000')
+            && str_contains(urldecode($request->url()), 'expand[0]=data.source')
+            && ! str_contains($request->url(), 'starting_after'));
+        Http::assertSent(static fn (Request $request): bool => str_contains($request->url(), 'starting_after=txn_3QK2AAJt8fA2kVnl1rF9gH0i'));
     }
 
     #[Test]

@@ -24,6 +24,12 @@ Schedule::command('ledger:reconcile')
     ->withoutOverlapping()
     ->onOneServer();
 
+// After ledger:reconcile, so a payments discrepancy is never a ledger drift.
+Schedule::command('payments:reconcile')
+    ->dailyAt('02:45')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('api-keys:notify-expiring')
     ->dailyAt('08:00')
     ->withoutOverlapping()

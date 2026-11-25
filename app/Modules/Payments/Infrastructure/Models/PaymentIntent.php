@@ -34,6 +34,7 @@ use Carbon\CarbonImmutable;
  * @property CarbonImmutable|null $captured_at
  * @property CarbonImmutable|null $failed_at
  * @property CarbonImmutable|null $cancelled_at
+ * @property CarbonImmutable|null $disputed_at
  * @property string|null $created_by
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -72,6 +73,7 @@ final class PaymentIntent extends Model
             'captured_at' => 'immutable_datetime',
             'failed_at' => 'immutable_datetime',
             'cancelled_at' => 'immutable_datetime',
+            'disputed_at' => 'immutable_datetime',
         ];
     }
 
