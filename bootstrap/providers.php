@@ -8,6 +8,7 @@ use App\Modules\Ledger\LedgerServiceProvider;
 use App\Modules\Orders\OrdersServiceProvider;
 use App\Modules\Payments\PaymentsServiceProvider;
 use App\Modules\Tenancy\TenancyServiceProvider;
+use App\Modules\Webhooks\WebhooksServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Shared\SharedServiceProvider;
 
@@ -22,4 +23,5 @@ return [
     OrdersServiceProvider::class,
     LedgerServiceProvider::class,
     PaymentsServiceProvider::class,
+    WebhooksServiceProvider::class,
 ];
