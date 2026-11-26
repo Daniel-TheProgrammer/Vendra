@@ -12,9 +12,9 @@ use App\Modules\Orders\Domain\IllegalTransition;
 use App\Modules\Orders\Domain\OrderStatus;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Domain\Exception\VersionMismatch;
-use Illuminate\Contracts\Events\Dispatcher;
 
 /**
  * Cancels an unpaid order and gives its reserved stock back, in one
@@ -28,7 +28,7 @@ final readonly class CancelOrder
         private OrderTransitions $transitions,
         private ReleaseStock $release,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     /**
@@ -37,16 +37,13 @@ final readonly class CancelOrder
      */
     public function __invoke(string $orderId, ?string $reason = null, ?string $actorId = null, ?int $expectedVersion = null): Order
     {
-        $order = $this->transaction->run(function () use ($orderId, $reason, $actorId, $expectedVersion): Order {
+        return $this->transaction->run(function () use ($orderId, $reason, $actorId, $expectedVersion): Order {
             $order = $this->lock->acquire($orderId, $expectedVersion);
             $this->transitions->apply($order, OrderStatus::Cancelled, $actorId, ['reason' => $reason]);
             ($this->release)($order->stockLines(), Order::stockReference($order->id));
+            $this->events->record(new OrderCancelled($order->tenant_id, $order->id, $order->version, $this->clock->now()));
 
             return $order;
         });
-
-        $this->events->dispatch(new OrderCancelled($order->tenant_id, $order->id, $order->version, $this->clock->now()));
-
-        return $order;
     }
 }

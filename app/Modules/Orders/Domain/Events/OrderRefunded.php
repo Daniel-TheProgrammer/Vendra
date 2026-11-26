@@ -6,8 +6,10 @@ namespace App\Modules\Orders\Domain\Events;
 
 final readonly class OrderRefunded extends OrderEvent
 {
+    public const NAME = 'orders.order_refunded';
+
     public function eventName(): string
     {
-        return 'orders.order_refunded';
+        return self::NAME;
     }
 }

@@ -12,10 +12,10 @@ use App\Modules\Payments\Domain\Settlement;
 use App\Modules\Payments\Infrastructure\Models\PaymentIntent;
 use App\Modules\Payments\Infrastructure\Models\Refund;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Domain\Exception\EntityNotFound;
 use App\Shared\Domain\Money\Money;
-use Illuminate\Contracts\Events\Dispatcher;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -33,7 +33,7 @@ final readonly class RefundSettlement
         private TransactionRunner $transaction,
         private Clock $clock,
         private RefundOrder $refundOrder,
-        private Dispatcher $events,
+        private EventRecorder $events,
         private LoggerInterface $logger,
     ) {}
 
@@ -42,9 +42,7 @@ final readonly class RefundSettlement
      */
     public function apply(string $refundId, RefundStatus $status, ?string $failureCode = null): Refund
     {
-        $issued = null;
-
-        $refund = $this->transaction->run(function () use ($refundId, $status, $failureCode, &$issued): Refund {
+        return $this->transaction->run(function () use ($refundId, $status, $failureCode): Refund {
             $refund = Refund::query()->whereKey($refundId)->first() ?? throw EntityNotFound::withId('Refund', $refundId);
             // Payment first, then refund: the order every refund path locks in.
             $intent = PaymentIntent::query()->whereKey($refund->payment_intent_id)->lockForUpdate()->firstOrFail();
@@ -66,7 +64,7 @@ final readonly class RefundSettlement
 
             if ($status === RefundStatus::Succeeded) {
                 $settlement = $intent->settlement ?? Settlement::Order;
-                $issued = new RefundIssued($intent->tenant_id, $intent->id, $intent->order_id, $refund->id, $refund->amount(), $previously, $settlement, $now);
+                $this->events->record(new RefundIssued($intent->tenant_id, $intent->id, $intent->order_id, $refund->id, $refund->amount(), $previously, $settlement, $now));
 
                 if ($settlement === Settlement::Order && $previously->add($refund->amount())->equals($intent->amount())) {
                     $this->refundOrder($intent, $refund);
@@ -75,12 +73,6 @@ final readonly class RefundSettlement
 
             return $refund;
         });
-
-        if ($issued instanceof RefundIssued) {
-            $this->events->dispatch($issued);
-        }
-
-        return $refund;
     }
 
     private function refundOrder(PaymentIntent $intent, Refund $refund): void

@@ -100,8 +100,8 @@ denied.
   than before. Requests are short, so this is acceptable. Long work belongs in
   a queued job, which is dispatched "after commit" and therefore sees only
   committed data.
-- Domain events are still dispatched in-process, before the outer commit. Until
-  the outbox lands (Phase 7), a listener can observe an event whose request is
-  then rolled back. No listener exists yet that would act on one.
+- Domain events are recorded in the outbox inside this transaction (ADR 0010),
+  so an event exists exactly when its request committed. *(Until Phase 7 they
+  were dispatched in-process and could escape a rolled-back request.)*
 - Stored responses take space: up to 24 hours of write responses per tenant.
   This is bounded by rate limits and pruned nightly.

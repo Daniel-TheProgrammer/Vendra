@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Payments\Domain\Events;
 
+use App\Shared\Domain\Event\StoredPayload;
 use Carbon\CarbonImmutable;
 
 final readonly class PaymentFailed extends PaymentEvent
@@ -18,9 +19,18 @@ final readonly class PaymentFailed extends PaymentEvent
         parent::__construct($tenantId, $paymentIntentId, $orderId, $occurredAt);
     }
 
+    public const NAME = 'payments.payment_failed';
+
     public function eventName(): string
     {
-        return 'payments.payment_failed';
+        return self::NAME;
+    }
+
+    public static function fromStored(string $tenantId, CarbonImmutable $occurredAt, array $payload): static
+    {
+        $stored = new StoredPayload($payload);
+
+        return new self($tenantId, $stored->string('payment_intent_id'), $stored->string('order_id'), $stored->nullableString('failure_code'), $occurredAt);
     }
 
     public function payload(): array

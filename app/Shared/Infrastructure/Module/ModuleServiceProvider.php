@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\Infrastructure\Module;
 
+use App\Shared\Domain\Event\DomainEvent;
+use App\Shared\Infrastructure\Outbox\EventRegistry;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -15,6 +17,7 @@ use Illuminate\Support\ServiceProvider;
  *   Database/Migrations/   loaded automatically
  *   Http/routes.php        registered under the versioned API prefix with the "api" group
  *   moduleCommands()       Artisan commands to register
+ *   moduleEvents()         domain events, for the outbox relay to rebuild
  *   modulePolicies()       model => policy map
  */
 abstract class ModuleServiceProvider extends ServiceProvider
@@ -38,6 +41,8 @@ abstract class ModuleServiceProvider extends ServiceProvider
                 ->group($base.'/Http/routes.php');
         }
 
+        $this->app->make(EventRegistry::class)->register(...$this->moduleEvents());
+
         foreach ($this->modulePolicies() as $model => $policy) {
             Gate::policy($model, $policy);
         }
@@ -51,6 +56,17 @@ abstract class ModuleServiceProvider extends ServiceProvider
      * @return list<class-string>
      */
     protected function moduleCommands(): array
+    {
+        return [];
+    }
+
+    /**
+     * The domain events this module raises, so the outbox relay can rebuild
+     * them (ADR 0010).
+     *
+     * @return list<class-string<DomainEvent>>
+     */
+    protected function moduleEvents(): array
     {
         return [];
     }

@@ -10,9 +10,9 @@ use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
 use App\Modules\Catalog\Infrastructure\Models\VariantPrice;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Domain\Exception\EntityNotFound;
-use Illuminate\Contracts\Events\Dispatcher;
 
 /**
  * Withdraws a scheduled price, including one that is running: the base price
@@ -25,7 +25,7 @@ final readonly class CancelScheduledPrice
         private TransactionRunner $transaction,
         private ProductLock $lock,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     public function __invoke(string $variantId, string $priceId, ?int $expectedVersion = null): Product
@@ -47,13 +47,11 @@ final readonly class CancelScheduledPrice
             $price->delete();
             $product->touchVersion();
             $product->save();
+            $this->events->record(new PriceChanged($product->tenant_id, $product->id, $product->version, $this->clock->now(), $variantId, $price->currency));
 
             return [$product, $price];
         });
 
-        [$product, $price] = $result;
-        $this->events->dispatch(new PriceChanged($product->tenant_id, $product->id, $product->version, $this->clock->now(), $variantId, $price->currency));
-
-        return $product;
+        return $result[0];
     }
 }

@@ -6,15 +6,18 @@ namespace App\Modules\Ledger\Infrastructure\Listeners;
 
 use App\Modules\Ledger\Application\Postings\OrderPostings;
 use App\Modules\Orders\Application\Queries\FindOrderSummary;
-use App\Modules\Orders\Domain\Events\OrderCancelled;
 use App\Modules\Orders\Domain\Events\OrderEvent;
-use App\Modules\Orders\Domain\Events\OrderPlaced;
+use App\Modules\Orders\Domain\OrderStatus;
 use App\Shared\Tenancy\TenantContext;
 
 /**
- * Books order events in the ledger, in the order's tenant. Runs in-process
- * today; with the outbox (Phase 7) the same listener is fed from it and
- * retried, which the postings' idempotency keys already allow for.
+ * Books an order in the ledger from its current state, in its tenant.
+ *
+ * Events come from the outbox at least once and in no guaranteed order
+ * (ADR 0010), so the listener does not trust the event's kind: whichever
+ * order event arrives, the sale is booked (once, by key) and, if the order
+ * is cancelled by now, reversed (once). An OrderCancelled delivered before
+ * its OrderPlaced therefore still ends with the sale booked and reversed.
  */
 final readonly class BookOrderLifecycle
 {
@@ -29,11 +32,11 @@ final readonly class BookOrderLifecycle
         $this->tenant->runAs($event->tenantId, function () use ($event): void {
             $order = ($this->orders)($event->orderId);
 
-            match (true) {
-                $event instanceof OrderPlaced => $this->postings->placed($order),
-                $event instanceof OrderCancelled => $this->postings->cancelled($order),
-                default => null,
-            };
+            $this->postings->placed($order);
+
+            if ($order->status === OrderStatus::Cancelled) {
+                $this->postings->cancelled($order);
+            }
         });
     }
 }

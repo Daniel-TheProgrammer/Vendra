@@ -10,8 +10,8 @@ use App\Modules\Catalog\Domain\ProductStatus;
 use App\Modules\Catalog\Domain\ProductVersionMismatch;
 use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
-use Illuminate\Contracts\Events\Dispatcher;
 
 /**
  * Products are archived, never deleted: past orders keep pointing at their
@@ -24,7 +24,7 @@ final readonly class ArchiveProduct
         private TransactionRunner $transaction,
         private ProductLock $lock,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     public function __invoke(string $productId, ?int $expectedVersion = null): Product
@@ -45,16 +45,11 @@ final readonly class ArchiveProduct
             $product->archived_at = $this->clock->now();
             $product->touchVersion();
             $product->save();
+            $this->events->record(new ProductArchived($product->tenant_id, $product->id, $product->version, $this->clock->now()));
 
             return [$product, true];
         });
 
-        [$product, $archived] = $result;
-
-        if ($archived) {
-            $this->events->dispatch(new ProductArchived($product->tenant_id, $product->id, $product->version, $this->clock->now()));
-        }
-
-        return $product;
+        return $result[0];
     }
 }

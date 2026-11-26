@@ -121,6 +121,9 @@ of 250 product groups, each group in its own transaction recorded in
 `product_import_groups`. A worker killed at any point loses nothing and
 duplicates nothing.
 
-**Known gap until Phase 7.** Domain events are dispatched in-process. An event
-fired inside an outer transaction (as during an import) is delivered even if
-that transaction later rolls back. The transactional outbox closes this gap.
+**Events.** Actions record domain events with `EventRecorder` inside their
+transaction; never dispatch them on the event bus (ADR 0010, enforced by
+`NoSynchronousDomainEventsTest`). A new event class declares `NAME`,
+implements `fromStored()`, and is listed in the module provider's
+`moduleEvents()`. Listeners must be idempotent and must not depend on the
+order events arrive in.

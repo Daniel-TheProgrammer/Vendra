@@ -10,10 +10,10 @@ use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
 use App\Modules\Catalog\Infrastructure\Models\VariantPrice;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Domain\Exception\EntityNotFound;
 use App\Shared\Domain\Money\Money;
-use Illuminate\Contracts\Events\Dispatcher;
 
 /**
  * Creates or replaces the variant's base price (the one without a validity
@@ -27,7 +27,7 @@ final readonly class SetVariantPrice
         private TransactionRunner $transaction,
         private ProductLock $lock,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     public function __invoke(string $variantId, Money $price, ?int $expectedVersion = null): Product
@@ -54,16 +54,11 @@ final readonly class SetVariantPrice
             $row->save();
             $product->touchVersion();
             $product->save();
+            $this->events->record(new PriceChanged($product->tenant_id, $product->id, $product->version, $this->clock->now(), $variantId, $price->currency));
 
             return [$product, true];
         });
 
-        [$product, $changed] = $result;
-
-        if ($changed) {
-            $this->events->dispatch(new PriceChanged($product->tenant_id, $product->id, $product->version, $this->clock->now(), $variantId, $price->currency));
-        }
-
-        return $product;
+        return $result[0];
     }
 }

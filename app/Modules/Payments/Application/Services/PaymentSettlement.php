@@ -7,17 +7,16 @@ namespace App\Modules\Payments\Application\Services;
 use App\Modules\Orders\Application\Actions\RecordPayment;
 use App\Modules\Orders\Domain\IllegalTransition;
 use App\Modules\Payments\Domain\Events\PaymentCaptured;
-use App\Modules\Payments\Domain\Events\PaymentEvent;
 use App\Modules\Payments\Domain\Events\PaymentFailed;
 use App\Modules\Payments\Domain\PaymentIntentStatus;
 use App\Modules\Payments\Domain\Settlement;
 use App\Modules\Payments\Infrastructure\Models\PaymentIntent;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Domain\Exception\EntityNotFound;
 use App\Shared\Domain\Money\Money;
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Events\Dispatcher;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -36,7 +35,7 @@ final readonly class PaymentSettlement
         private TransactionRunner $transaction,
         private Clock $clock,
         private RecordPayment $recordPayment,
-        private Dispatcher $events,
+        private EventRecorder $events,
         private LoggerInterface $logger,
     ) {}
 
@@ -45,10 +44,7 @@ final readonly class PaymentSettlement
      */
     public function apply(string $intentId, PaymentUpdate $update): PaymentIntent
     {
-        /** @var list<PaymentEvent> $recorded */
-        $recorded = [];
-
-        $intent = $this->transaction->run(function () use ($intentId, $update, &$recorded): PaymentIntent {
+        return $this->transaction->run(function () use ($intentId, $update): PaymentIntent {
             $intent = PaymentIntent::query()->whereKey($intentId)->lockForUpdate()->first() ?? throw EntityNotFound::withId('Payment intent', $intentId);
 
             if (! $this->isNews($intent, $update)) {
@@ -63,25 +59,19 @@ final readonly class PaymentSettlement
                 $fee = $update->fee ?? Money::zero($intent->currency);
                 $intent->fee_minor = $fee->amount;
                 $intent->settlement = $this->payOrder($intent);
-                $recorded[] = new PaymentCaptured($intent->tenant_id, $intent->id, $intent->order_id, $intent->amount(), $fee, $intent->settlement, $now);
+                $this->events->record(new PaymentCaptured($intent->tenant_id, $intent->id, $intent->order_id, $intent->amount(), $fee, $intent->settlement, $now));
             }
 
             if ($update->status === PaymentIntentStatus::Failed) {
                 $intent->failure_code = $update->failureCode;
                 $intent->failure_message = $update->failureMessage !== null ? mb_substr($update->failureMessage, 0, 500) : null;
-                $recorded[] = new PaymentFailed($intent->tenant_id, $intent->id, $intent->order_id, $update->failureCode, $now);
+                $this->events->record(new PaymentFailed($intent->tenant_id, $intent->id, $intent->order_id, $update->failureCode, $now));
             }
 
             $intent->save();
 
             return $intent;
         });
-
-        foreach ($recorded as $event) {
-            $this->events->dispatch($event);
-        }
-
-        return $intent;
     }
 
     /**

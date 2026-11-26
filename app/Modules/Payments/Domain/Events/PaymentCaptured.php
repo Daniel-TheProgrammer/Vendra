@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Payments\Domain\Events;
 
 use App\Modules\Payments\Domain\Settlement;
+use App\Shared\Domain\Event\StoredPayload;
 use App\Shared\Domain\Money\Money;
 use Carbon\CarbonImmutable;
 
@@ -26,9 +27,26 @@ final readonly class PaymentCaptured extends PaymentEvent
         parent::__construct($tenantId, $paymentIntentId, $orderId, $occurredAt);
     }
 
+    public const NAME = 'payments.payment_captured';
+
     public function eventName(): string
     {
-        return 'payments.payment_captured';
+        return self::NAME;
+    }
+
+    public static function fromStored(string $tenantId, CarbonImmutable $occurredAt, array $payload): static
+    {
+        $stored = new StoredPayload($payload);
+
+        return new self(
+            $tenantId,
+            $stored->string('payment_intent_id'),
+            $stored->string('order_id'),
+            $stored->money('amount'),
+            $stored->money('fee'),
+            Settlement::from($stored->string('settlement')),
+            $occurredAt,
+        );
     }
 
     public function payload(): array

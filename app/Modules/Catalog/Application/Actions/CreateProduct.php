@@ -10,8 +10,8 @@ use App\Modules\Catalog\Application\Services\VariantWriter;
 use App\Modules\Catalog\Domain\Events\ProductCreated;
 use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
-use Illuminate\Contracts\Events\Dispatcher;
 
 /**
  * A product is created together with its variants: there is never a product
@@ -23,12 +23,12 @@ final readonly class CreateProduct
         private TransactionRunner $transaction,
         private VariantWriter $variants,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     public function __invoke(CreateProductCommand $command): Product
     {
-        $product = $this->transaction->run(function () use ($command): Product {
+        return $this->transaction->run(function () use ($command): Product {
             $this->variants->ensureSkusAreFree(array_map(static fn (VariantData $variant): string => $variant->sku, $command->variants));
 
             $product = new Product([
@@ -43,11 +43,9 @@ final readonly class CreateProduct
                 $this->variants->add($product, $variant);
             }
 
+            $this->events->record(new ProductCreated($product->tenant_id, $product->id, $product->version, $this->clock->now()));
+
             return $product;
         });
-
-        $this->events->dispatch(new ProductCreated($product->tenant_id, $product->id, $product->version, $this->clock->now()));
-
-        return $product;
     }
 }

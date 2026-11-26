@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalog\Domain\Events;
 
+use App\Shared\Domain\Event\StoredPayload;
 use App\Shared\Domain\Money\Currency;
 use Carbon\CarbonImmutable;
 
@@ -25,9 +26,18 @@ final readonly class PriceChanged extends ProductEvent
         parent::__construct($tenantId, $productId, $version, $occurredAt);
     }
 
+    public const NAME = 'catalog.price_changed';
+
     public function eventName(): string
     {
-        return 'catalog.price_changed';
+        return self::NAME;
+    }
+
+    public static function fromStored(string $tenantId, CarbonImmutable $occurredAt, array $payload): static
+    {
+        $stored = new StoredPayload($payload);
+
+        return new self($tenantId, $stored->string('product_id'), $stored->int('version'), $occurredAt, $stored->string('variant_id'), $stored->currency());
     }
 
     public function payload(): array

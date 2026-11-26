@@ -14,23 +14,25 @@ use App\Modules\Catalog\Infrastructure\Models\ProductImportGroup;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
 use App\Modules\Identity\Domain\MembershipRole;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use App\Shared\Domain\Event\DomainEvent;
 use App\Shared\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
+use Tests\Support\FailsWhenRecording;
 use Tests\Support\IssuesApiKeys;
 use Tests\TestCase;
 
 #[Group('database')]
 final class ProductImportTest extends TestCase
 {
+    use FailsWhenRecording;
     use IssuesApiKeys;
     use RefreshDatabase;
 
@@ -133,11 +135,9 @@ final class ProductImportTest extends TestCase
 
         // The worker dies while creating the third product.
         $created = 0;
-        Event::listen(ProductCreated::class, static function () use (&$created): void {
-            if (++$created === 3) {
-                throw new RuntimeException('worker killed');
-            }
-        });
+        $this->failWhenRecording(static function (DomainEvent $event) use (&$created): bool {
+            return $event instanceof ProductCreated && ++$created === 3;
+        }, new RuntimeException('worker killed'));
 
         try {
             $this->asTenant(fn () => $this->app->make(RunProductImport::class)($id));
@@ -154,6 +154,7 @@ final class ProductImportTest extends TestCase
         });
 
         // A fresh worker picks the import up again.
+        $this->recordNormally();
         $this->asTenant(fn () => $this->app->make(RunProductImport::class)($id));
 
         $this->asTenant(function () use ($id): void {

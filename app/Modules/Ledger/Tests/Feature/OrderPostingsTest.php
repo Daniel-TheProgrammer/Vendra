@@ -18,6 +18,7 @@ use App\Modules\Ledger\Infrastructure\Models\JournalEntryRecord;
 use App\Modules\Orders\Application\Actions\RecordPayment;
 use App\Modules\Orders\Application\Actions\RefundOrder;
 use App\Modules\Orders\Application\Actions\RequestPayment;
+use App\Modules\Orders\Domain\Events\OrderCancelled;
 use App\Modules\Orders\Domain\Events\OrderPlaced;
 use App\Modules\Orders\Domain\Pricing\TaxStrategy;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
@@ -151,6 +152,28 @@ final class OrderPostingsTest extends TestCase
 
         $kinds = $this->asTenant(static fn (): array => JournalEntryRecord::query()->orderBy('id')->pluck('kind')->all());
         self::assertSame([EntryKind::System, EntryKind::Reversal], $kinds);
+    }
+
+    /**
+     * The outbox delivers at least once and in no guaranteed order (ADR
+     * 0010): a cancellation can reach the ledger before the placement.
+     */
+    #[Test]
+    public function order_events_delivered_out_of_order_or_twice_still_book_the_sale_and_its_reversal(): void
+    {
+        config(['outbox.after_commit' => 'off']);
+        $id = $this->place(1);
+        $this->postJson('/api/v1/orders/'.$id.'/cancel')->assertOk();
+        self::assertSame(0, $this->asTenant(static fn (): int => JournalEntryRecord::query()->count()), 'nothing published yet');
+
+        $now = CarbonImmutable::now();
+        event(new OrderCancelled($this->tenant->id, $id, 2, $now));
+        event(new OrderPlaced($this->tenant->id, $id, 1, $now));
+        event(new OrderPlaced($this->tenant->id, $id, 1, $now));
+
+        $kinds = $this->asTenant(static fn (): array => JournalEntryRecord::query()->orderBy('id')->pluck('kind')->all());
+        self::assertSame([EntryKind::System, EntryKind::Reversal], $kinds);
+        self::assertSame(['cash' => 0, 'receivable' => 0, 'tax' => 0, 'revenue' => 0], $this->balances());
     }
 
     /**

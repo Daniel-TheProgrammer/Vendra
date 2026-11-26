@@ -11,8 +11,8 @@ use App\Modules\Catalog\Domain\Events\ProductUpdated;
 use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
-use Illuminate\Contracts\Events\Dispatcher;
 
 final readonly class AddVariant
 {
@@ -21,7 +21,7 @@ final readonly class AddVariant
         private ProductLock $lock,
         private VariantWriter $variants,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     public function __invoke(string $productId, VariantData $data, ?int $expectedVersion = null): ProductVariant
@@ -35,14 +35,11 @@ final readonly class AddVariant
 
             $product->touchVersion();
             $product->save();
+            $this->events->record(new ProductUpdated($product->tenant_id, $product->id, $product->version, $this->clock->now()));
 
             return [$product, $variant];
         });
 
-        [$product, $variant] = $result;
-
-        $this->events->dispatch(new ProductUpdated($product->tenant_id, $product->id, $product->version, $this->clock->now()));
-
-        return $variant;
+        return $result[1];
     }
 }

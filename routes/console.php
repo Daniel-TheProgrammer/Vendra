@@ -30,6 +30,11 @@ Schedule::command('payments:reconcile')
     ->withoutOverlapping()
     ->onOneServer();
 
+Schedule::command('outbox:prune')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('api-keys:notify-expiring')
     ->dailyAt('08:00')
     ->withoutOverlapping()
