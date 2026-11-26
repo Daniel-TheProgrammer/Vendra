@@ -6,10 +6,10 @@ namespace App\Modules\Payments\Application\Actions;
 
 use App\Modules\Payments\Domain\Events\PaymentDisputed;
 use App\Modules\Payments\Infrastructure\Models\PaymentIntent;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Domain\Money\Money;
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Events\Dispatcher;
 
 /**
  * Marks a payment as disputed and tells whoever listens (webhooks to the
@@ -23,7 +23,7 @@ final readonly class RecordDispute
 {
     public function __construct(
         private TransactionRunner $transaction,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     /**
@@ -31,25 +31,18 @@ final readonly class RecordDispute
      */
     public function __invoke(string $intentId, Money $amount, ?string $reason, CarbonImmutable $at): bool
     {
-        $intent = $this->transaction->run(static function () use ($intentId, $at): ?PaymentIntent {
+        return $this->transaction->run(function () use ($intentId, $amount, $reason, $at): bool {
             $intent = PaymentIntent::query()->whereKey($intentId)->lockForUpdate()->first();
 
             if (! $intent instanceof PaymentIntent || $intent->disputed_at !== null) {
-                return null;
+                return false;
             }
 
             $intent->disputed_at = $at;
             $intent->save();
+            $this->events->record(new PaymentDisputed($intent->tenant_id, $intent->id, $intent->order_id, $amount, $reason, $at));
 
-            return $intent;
+            return true;
         });
-
-        if (! $intent instanceof PaymentIntent) {
-            return false;
-        }
-
-        $this->events->dispatch(new PaymentDisputed($intent->tenant_id, $intent->id, $intent->order_id, $amount, $reason, $at));
-
-        return true;
     }
 }

@@ -12,8 +12,8 @@ use App\Modules\Orders\Domain\IllegalTransition;
 use App\Modules\Orders\Domain\OrderStatus;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
-use Illuminate\Contracts\Events\Dispatcher;
 
 /**
  * paid or fulfilled → refunded (Payments module, Phase 6).
@@ -30,7 +30,7 @@ final readonly class RefundOrder
         private OrderTransitions $transitions,
         private ReleaseStock $release,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     /**
@@ -38,7 +38,7 @@ final readonly class RefundOrder
      */
     public function __invoke(string $orderId, ?string $refundReference = null, ?string $actorId = null): Order
     {
-        $order = $this->transaction->run(function () use ($orderId, $refundReference, $actorId): Order {
+        return $this->transaction->run(function () use ($orderId, $refundReference, $actorId): Order {
             $order = $this->lock->acquire($orderId);
             $heldStock = $order->status->holdsStock();
 
@@ -48,11 +48,9 @@ final readonly class RefundOrder
                 ($this->release)($order->stockLines(), Order::stockReference($order->id));
             }
 
+            $this->events->record(new OrderRefunded($order->tenant_id, $order->id, $order->version, $this->clock->now()));
+
             return $order;
         });
-
-        $this->events->dispatch(new OrderRefunded($order->tenant_id, $order->id, $order->version, $this->clock->now()));
-
-        return $order;
     }
 }

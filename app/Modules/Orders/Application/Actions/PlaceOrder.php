@@ -23,9 +23,9 @@ use App\Modules\Orders\Domain\OrderStatus;
 use App\Modules\Orders\Infrastructure\Models\Order;
 use App\Modules\Orders\Infrastructure\Models\OrderLine;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
 use DateTimeInterface;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Str;
 
 /**
@@ -53,7 +53,7 @@ final readonly class PlaceOrder
         private OrderNumbers $numbers,
         private OrderHistory $history,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     /**
@@ -62,7 +62,7 @@ final readonly class PlaceOrder
      */
     public function __invoke(PlaceOrderCommand $command): Order
     {
-        $order = $this->transaction->run(function () use ($command): Order {
+        return $this->transaction->run(function () use ($command): Order {
             $now = $this->clock->now();
             $lines = $this->price($command, $now);
             $totals = $this->pricing->totals($command->currency, $lines, $command->shippingAddress);
@@ -107,13 +107,10 @@ final readonly class PlaceOrder
             }
 
             $this->history->record($order, 'placed', null, $command->actorId, ['number' => $order->number, 'total' => $order->total]);
+            $this->events->record(new OrderPlaced($order->tenant_id, $order->id, $order->version, $now));
 
             return $order;
         });
-
-        $this->events->dispatch(new OrderPlaced($order->tenant_id, $order->id, $order->version, $this->clock->now()));
-
-        return $order;
     }
 
     /**

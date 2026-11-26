@@ -78,10 +78,12 @@ domain events, keyed so a redelivered event books once:
 *Amended 2026-11-25 (ADR 0009).* Money is booked from the Payments events, not
 from the order's status: `OrderPaid` and `OrderRefunded` book nothing. Only the
 payment knows the fee the provider kept, and what was actually refunded.
-Today listeners run in-process, inside the request's transaction (ADR 0007). If
-a posting fails, the business change that caused it rolls back too. With the
-outbox (Phase 7), they will run from it with retries, which the keys already
-make safe.
+*Amended 2026-11-26 (ADR 0010).* Listeners run from the outbox after the
+business change commits, at least once and in no guaranteed order. A posting
+that fails no longer rolls the business change back: the event is retried
+with backoff, which the keys make safe. The order listener books from the
+order's current state (the sale, then its reversal if the order is cancelled
+by now), so a cancellation delivered before its placement still ends right.
 
 **Materialised balances.** `account_balances` holds running debit and credit
 totals per account. They are updated by `PostJournalEntry` in the posting's

@@ -7,10 +7,16 @@ namespace App\Shared;
 use App\Shared\Application\Audit\AuditTrail;
 use App\Shared\Application\Clock\Clock;
 use App\Shared\Application\Clock\SystemClock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\DatabaseTransactionRunner;
 use App\Shared\Application\Transaction\TransactionRunner;
 use App\Shared\Infrastructure\Audit\DatabaseAuditTrail;
 use App\Shared\Infrastructure\Http\Idempotency\PruneIdempotencyKeys;
+use App\Shared\Infrastructure\Outbox\EventRegistry;
+use App\Shared\Infrastructure\Outbox\OutboxRecorder;
+use App\Shared\Infrastructure\Outbox\OutboxRelay;
+use App\Shared\Infrastructure\Outbox\PruneOutboxCommand;
+use App\Shared\Infrastructure\Outbox\RelayOutboxCommand;
 use App\Shared\Infrastructure\Persistence\BlueprintMacros;
 use App\Shared\Tenancy\Rls\SyncTenantSessionVariable;
 use App\Shared\Tenancy\TenantContext;
@@ -31,6 +37,9 @@ final class SharedServiceProvider extends ServiceProvider
         $this->app->singleton(AuditTrail::class, DatabaseAuditTrail::class);
         $this->app->singleton(TenantContext::class);
         $this->app->singleton(SyncTenantSessionVariable::class);
+        $this->app->singleton(EventRegistry::class);
+        $this->app->singleton(EventRecorder::class, OutboxRecorder::class);
+        $this->app->singleton(OutboxRelay::class);
 
         Date::use(CarbonImmutable::class);
     }
@@ -40,7 +49,7 @@ final class SharedServiceProvider extends ServiceProvider
         BlueprintMacros::register();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([PruneIdempotencyKeys::class]);
+            $this->commands([PruneIdempotencyKeys::class, RelayOutboxCommand::class, PruneOutboxCommand::class]);
         }
 
         $events->listen(TenantContextChanged::class, [SyncTenantSessionVariable::class, 'onTenantChanged']);

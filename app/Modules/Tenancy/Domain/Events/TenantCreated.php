@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Tenancy\Domain\Events;
 
 use App\Shared\Domain\Event\DomainEvent;
+use App\Shared\Domain\Event\StoredPayload;
 use Carbon\CarbonImmutable;
 
 final readonly class TenantCreated implements DomainEvent
@@ -15,9 +16,16 @@ final readonly class TenantCreated implements DomainEvent
         public CarbonImmutable $occurredAt,
     ) {}
 
+    public const NAME = 'tenancy.tenant_created';
+
     public function eventName(): string
     {
-        return 'tenancy.tenant_created';
+        return self::NAME;
+    }
+
+    public static function fromStored(string $tenantId, CarbonImmutable $occurredAt, array $payload): static
+    {
+        return new self($tenantId, (new StoredPayload($payload))->string('slug'), $occurredAt);
     }
 
     public function tenantId(): string

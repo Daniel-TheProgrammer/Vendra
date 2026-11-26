@@ -9,6 +9,7 @@ use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Identity\Domain\MembershipRole;
 use App\Modules\Identity\Infrastructure\Models\User;
 use App\Modules\Tenancy\Infrastructure\Models\Tenant;
+use App\Shared\Domain\Event\DomainEvent;
 use App\Shared\Infrastructure\Http\Idempotency\EnforceIdempotency;
 use App\Shared\Infrastructure\Http\Idempotency\IdempotencyRecord;
 use App\Shared\Tenancy\TenantContext;
@@ -16,11 +17,11 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
+use Tests\Support\FailsWhenRecording;
 use Tests\TestCase;
 
 /**
@@ -30,6 +31,7 @@ use Tests\TestCase;
 #[Group('database')]
 final class IdempotencyKeyTest extends TestCase
 {
+    use FailsWhenRecording;
     use RefreshDatabase;
 
     protected bool $sendIdempotencyKeys = false;
@@ -169,16 +171,14 @@ final class IdempotencyKeyTest extends TestCase
     #[Test]
     public function a_failed_request_leaves_no_effects_and_frees_its_key(): void
     {
-        // The product is written and its inner transaction committed, then
-        // something after it fails: the whole request must roll back.
-        Event::listen(ProductCreated::class, static function (): never {
-            throw new RuntimeException('downstream failure');
-        });
+        // The product is written, then the request fails before it commits:
+        // the whole request must roll back.
+        $this->failWhenRecording(static fn (DomainEvent $event): bool => $event instanceof ProductCreated, new RuntimeException('downstream failure'));
 
         $this->create('k-4', $this->product())->assertStatus(500);
         self::assertSame(0, $this->products(), 'the effects rolled back with the failed request');
 
-        Event::forget(ProductCreated::class);
+        $this->recordNormally();
         $this->create('k-4', $this->product())->assertCreated()->assertHeaderMissing(EnforceIdempotency::REPLAYED_HEADER);
         self::assertSame(1, $this->products());
     }

@@ -10,7 +10,9 @@ use Carbon\CarbonImmutable;
  * Something that happened in the domain and that other modules may react to.
  *
  * Events are immutable facts. The payload must be plain scalars and arrays so it
- * can be stored in the outbox and delivered to webhook subscribers unchanged.
+ * can be stored in the outbox and delivered to webhook subscribers unchanged,
+ * and fromStored() must rebuild an equal event from it: that is how the outbox
+ * relay publishes it.
  */
 interface DomainEvent
 {
@@ -19,7 +21,7 @@ interface DomainEvent
      */
     public function eventName(): string;
 
-    public function tenantId(): ?string;
+    public function tenantId(): string;
 
     public function occurredAt(): CarbonImmutable;
 
@@ -27,4 +29,11 @@ interface DomainEvent
      * @return array<string, mixed>
      */
     public function payload(): array;
+
+    /**
+     * The event payload() describes, as the outbox stored it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public static function fromStored(string $tenantId, CarbonImmutable $occurredAt, array $payload): static;
 }

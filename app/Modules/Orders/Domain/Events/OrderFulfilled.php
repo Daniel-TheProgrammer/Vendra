@@ -6,8 +6,10 @@ namespace App\Modules\Orders\Domain\Events;
 
 final readonly class OrderFulfilled extends OrderEvent
 {
+    public const NAME = 'orders.order_fulfilled';
+
     public function eventName(): string
     {
-        return 'orders.order_fulfilled';
+        return self::NAME;
     }
 }

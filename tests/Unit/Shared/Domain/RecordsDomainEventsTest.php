@@ -35,9 +35,16 @@ final class RecordsDomainEventsTest extends TestCase
                         return 'test.'.$this->what;
                     }
 
-                    public function tenantId(): ?string
+                    public function tenantId(): string
                     {
-                        return null;
+                        return 'tenant-1';
+                    }
+
+                    public static function fromStored(string $tenantId, CarbonImmutable $occurredAt, array $payload): static
+                    {
+                        $what = $payload['what'] ?? '';
+
+                        return new self(is_string($what) ? $what : '');
                     }
 
                     public function occurredAt(): CarbonImmutable

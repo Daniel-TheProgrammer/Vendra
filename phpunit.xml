@@ -60,6 +60,8 @@
         <server name="LOG_STACK" value="single" force="true"/>
         <server name="MAIL_MAILER" value="array" force="true"/>
         <server name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <!-- Listeners run before the request returns, so tests see their effects. -->
+        <server name="OUTBOX_AFTER_COMMIT" value="inline" force="true"/>
         <server name="SESSION_DRIVER" value="array" force="true"/>
         <server name="PULSE_ENABLED" value="false" force="true"/>
         <server name="TELESCOPE_ENABLED" value="false" force="true"/>

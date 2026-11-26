@@ -10,8 +10,8 @@ use App\Modules\Catalog\Domain\Events\ProductUpdated;
 use App\Modules\Catalog\Domain\ProductStatus;
 use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Shared\Application\Clock\Clock;
+use App\Shared\Application\Event\EventRecorder;
 use App\Shared\Application\Transaction\TransactionRunner;
-use Illuminate\Contracts\Events\Dispatcher;
 
 final readonly class UpdateProduct
 {
@@ -19,7 +19,7 @@ final readonly class UpdateProduct
         private TransactionRunner $transaction,
         private ProductLock $lock,
         private Clock $clock,
-        private Dispatcher $events,
+        private EventRecorder $events,
     ) {}
 
     public function __invoke(UpdateProductCommand $command): Product
@@ -47,16 +47,11 @@ final readonly class UpdateProduct
 
             $product->touchVersion();
             $product->save();
+            $this->events->record(new ProductUpdated($product->tenant_id, $product->id, $product->version, $this->clock->now()));
 
             return [$product, true];
         });
 
-        [$product, $changed] = $result;
-
-        if ($changed) {
-            $this->events->dispatch(new ProductUpdated($product->tenant_id, $product->id, $product->version, $this->clock->now()));
-        }
-
-        return $product;
+        return $result[0];
     }
 }

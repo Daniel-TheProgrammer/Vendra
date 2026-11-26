@@ -57,6 +57,14 @@ services:
       disable: true
     stop_grace_period: 60s
 
+  # Publishes recorded domain events (ADR 0010). Any number may run.
+  outbox-relay:
+    <<: *app
+    command: ["php", "artisan", "outbox:relay", "--max-time=3600"]
+    healthcheck:
+      disable: true
+    stop_grace_period: 30s
+
   scheduler:
     <<: *app
     command: ["php", "artisan", "schedule:work"]
