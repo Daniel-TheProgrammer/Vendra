@@ -71,7 +71,12 @@ final class OutboxRelay
                 try {
                     $connection->transaction(function () use ($connection, $message): void {
                         $event = $this->rebuild($message->tenant_id, $message->event_type, $message->occurred_at, $message->payload);
-                        $this->tenant->runAs($message->tenant_id, fn () => $this->events()->dispatch($event));
+                        $envelope = new EventPublished($message->id, $message->tenant_id, $message->event_type, $event->payload(), $event->occurredAt());
+
+                        $this->tenant->runAs($message->tenant_id, function () use ($event, $envelope): void {
+                            $this->events()->dispatch($event);
+                            $this->events()->dispatch($envelope);
+                        });
                         $connection->update('UPDATE outbox_messages SET published_at = ?, last_error = NULL WHERE id = ?', [$this->now(), $message->id]);
                     });
                     $published++;
