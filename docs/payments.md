@@ -224,5 +224,6 @@ Against Stripe test mode:
 - **Dispute outcomes.** A dispute is recorded but not booked; the amount
   Stripe withholds and the outcome (won or lost) are booked when dispute
   resolution is built.
-- **Outbound notifications.** `PaymentCaptured`, `PaymentFailed` and
-  `PaymentDisputed` reach tenants as webhooks with the outbox (Phase 7).
+- **Dispute webhooks carry no outcome yet.** `payments.payment_disputed`
+  reaches subscribers like every event (`docs/webhooks.md`), but the
+  outcome of a dispute is not an event until dispute resolution is built.

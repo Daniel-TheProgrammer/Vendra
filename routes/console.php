@@ -35,6 +35,17 @@ Schedule::command('outbox:prune')
     ->withoutOverlapping()
     ->onOneServer();
 
+// Retries and lost first attempts of webhook deliveries.
+Schedule::command('webhooks:deliver-due')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('webhooks:prune')
+    ->dailyAt('03:45')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('api-keys:notify-expiring')
     ->dailyAt('08:00')
     ->withoutOverlapping()

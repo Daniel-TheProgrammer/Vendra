@@ -86,6 +86,32 @@ Therefore every listener must be:
   alone. The ledger's order listener books the sale and, if the order is
   cancelled by now, its reversal, whichever order event arrives first.
 
+## Outbound webhooks
+
+Webhook delivery is the outbox's main consumer, and adds its own guarantees
+(the contract for subscribers is in `docs/webhooks.md`):
+
+- **Fan-out with the publication.** For each message, the relay also
+  dispatches an `EventPublished` envelope, which carries the message id. The
+  Webhooks module creates one delivery per interested subscription in the
+  relay's savepoint, so deliveries commit with the published mark. A unique
+  (subscription, event) pair makes a republished event create nothing new.
+- **At least once per subscription; no ordering.** Each delivery is
+  attempted, then retried at 1 min, 5 min, 30 min, 2 h and 12 h, then marked
+  dead until a redelivery. Attempts claim their delivery with a lease, so the
+  queued job and the minute sweeper (`webhooks:deliver-due`) never send it
+  concurrently. A receiver can still see a delivery twice: if it answered
+  after our timeout, or after a redelivery. It deduplicates on
+  `Webhook-Id`, the event id.
+- **Signed.** Every request is signed: HMAC-SHA256 over the timestamp and
+  the body, with both secrets during a rotation.
+- **Never to Vendra's own network.** The SSRF guard checks the URL on
+  subscribe and again on every attempt, and the request connects only to an
+  address it approved, so DNS rebinding cannot redirect it.
+- **Failing receivers are paused.** Ten consecutive failed attempts pause
+  the subscription and email the tenant's owners. Its events keep
+  accumulating as pending deliveries until it is resumed.
+
 ## Consequences
 
 - A failing listener no longer fails the request that raised the event. The
